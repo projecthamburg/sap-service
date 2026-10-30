@@ -15,8 +15,70 @@ export async function sendForm(config, kind, payload, files = [], token = "") {
   );
   for (const file of files) body.append("files", file, file.name);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45000);
+  const timer = setTimeout(() => controller.abort(), 180000);
   try {
+    if (config.uploadMode === "direct") {
+      const preparedResponse = await fetch(
+        `${config.apiUrl}/v1/${kind}/prepare`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            payload: { ...payload, kind, turnstileToken: token },
+            files: files.map((file) => ({
+              name: file.name,
+              size: file.size,
+              type: file.type,
+            })),
+          }),
+          signal: controller.signal,
+        }
+      );
+      const prepared = await preparedResponse.json();
+      if (
+        !preparedResponse.ok ||
+        !prepared.reference ||
+        !Array.isArray(prepared.uploads) ||
+        prepared.uploads.length !== files.length
+      )
+        throw new Error(prepared.error || "Unable to prepare submission.");
+      await Promise.all(
+        prepared.uploads.map(async (upload, index) => {
+          const target = new URL(upload.url);
+          if (
+            target.protocol !== "https:" ||
+            !target.hostname.endsWith(".amazonaws.com")
+          )
+            throw new Error("Unexpected upload destination.");
+          const fileBody = new FormData();
+          for (const [key, value] of Object.entries(upload.fields))
+            fileBody.append(key, value);
+          fileBody.append("file", files[index], files[index].name);
+          const response = await fetch(upload.url, {
+            method: "POST",
+            body: fileBody,
+            signal: controller.signal,
+          });
+          if (!response.ok)
+            throw new Error(
+              "A supporting file could not be uploaded. Please try again."
+            );
+        })
+      );
+      const response = await fetch(`${config.apiUrl}/v1/${kind}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reference: prepared.reference,
+          token: prepared.token,
+        }),
+        signal: controller.signal,
+      });
+      const data = await response.json();
+      if (!response.ok || !data.reference)
+        throw new Error(data.error || "Submission failed.");
+      return data;
+    }
     const response = await fetch(`${config.apiUrl}/v1/${kind}`, {
       method: "POST",
       body,

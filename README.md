@@ -1,59 +1,61 @@
 # SAP Service Inc.
 
-A rebuilt bilingual construction-cleaning website for Montréal, Québec and Ontario. The homepage includes the full estimate questionnaire and embedded scheduling calendar. Careers, privacy and estimate terms use hash routes that work on GitHub Pages.
+A bilingual construction-cleaning website for Montréal, Québec and Ontario, with an inline estimate questionnaire, an embedded consultation calendar, careers applications and a private administrative inbox.
 
-## Run and verify
+**Website:** https://projecthamburg.github.io/sap-service/
 
-Requires Node.js 22 or later. No dependency installation is needed.
+## Develop and verify
+
+The frontend uses standard browser modules and needs no dependency installation. Node.js 22 or later is required for the development tools. Install the separate private-service dependencies to run its tests or deploy it.
 
 ```sh
-npm run dev       # http://127.0.0.1:4173
-npm test         # calculations, conversions, uploads, privacy and service checks
-npm run test:browser # with dev server running: real-control tests in Chrome
-npm run build    # explicit public-file allowlist -> dist/
-npm run check    # syntax and public-artifact credential checks
+npm --prefix api ci
+npm run dev           # http://127.0.0.1:4173
+npm test              # estimation, validation and private-service contracts
+npm run test:browser  # with dev server running: real controls in Google Chrome
+npm run build         # only index.html, src/ and public/ -> dist/
+npm run check         # syntax, asset references and public credential scan
 ```
 
-## Included
+## Experience
 
-- Responsive architectural design, Canadian EN/FR, light/dark preferences, reduced-motion support.
-- Cleaning phases, service sectors, company approach, FAQ and supplied business contact details.
-- Inline six-step estimator: project/room modes, metric/imperial units, site modifiers, attachments, editable sample rooms and a matching 1,500 sq ft sample plan.
-- Configurable **illustrative** pricing in `src/pricing.js`, with transparent assumptions, local saving, JSON export and printable PDF output.
-- Photorealistic illustrative cleaning comparison, never presented as a completed SAP contract or a transformed visitor upload.
-- Careers page with résumé validation, qualifications and seven-day/four-shift availability.
-- Cloudflare Worker companion: D1 records, private R2 attachments, consent and file-signature validation, rate limits, authenticated administration and 90-day deletion.
-- GitHub Actions: tests, public build, credential checks and Pages deployment.
+- Architectural photography, the supplied SAP brand, locally hosted Figtree, Canadian English/French and light/dark themes.
+- Construction cleaning phases, service sectors, operational approach, FAQ and supplied business contact details.
+- Six-step, inline project/room estimator with metric/imperial units, modifiers, optional plans/photos, editable sample rooms and a matching fictional 1,500-square-foot floor plan.
+- Transparent **illustrative** planning assumptions in `src/pricing.js`, local scope saving, JSON export, print/Save as PDF and formal quotation requests.
+- Five photorealistic illustrative comparisons. They are not presented as completed SAP contracts or transformations of visitor uploads.
+- Careers form with résumé validation, qualifications, consent and a seven-day/four-shift availability grid. Switching languages preserves the application in memory.
+- Real private submissions, direct-to-storage uploads and an authenticated administrative inbox at `#/en/inbox` or `#/fr/inbox`.
 
-## Forms and private files
+## Private service
 
-`public/site-config.json` contains public endpoints only. While `apiUrl` is empty, forms prepare an email draft; the visitor must attach files and send the draft in their own mail application. A prepared draft is never described as received.
+AWS Lambda, DynamoDB and a private S3 bucket operate in **Canada Central**. Plans and résumés upload using short-lived, size-restricted signed forms. File signatures and object metadata are checked before a receipt reference is issued. Records expire after 90 days and an S3 lifecycle policy expires the files. Notifications to SAP are configured through Resend; private files stay in storage.
 
-Enable direct submissions with `node scripts/provision-api.mjs`, or configure the secrets in [operations](docs/operations.md) and run the **Deploy private form service** workflow. The endpoint is health-checked before its public configuration is updated. Rebuild and publish afterward.
+`public/site-config.json` contains only public endpoints. API credentials never enter the browser bundle. Inbox access uses a private key held only in the tab's memory. The operator's key is stored locally in ignored `.local/aws-service-secrets.json`; GitHub holds an encrypted copy for service deployment.
 
-Contact details and file bytes are not stored in localStorage. Plans, photos and résumés transmit only after explicit submission with consent. There is no automatic floor-plan extraction or live image-editing service.
+No contact details or file bytes are saved in localStorage. Attachments transmit only after explicit submission with consent. The site does not silently extract plan dimensions or transform uploaded photographs.
 
-## GitHub Pages
+## Deployment
 
-`npm run deploy` verifies the site, creates `sap-service` under the authenticated account if needed, stages only the intended source files, pushes `main`, enables the Pages Actions source and dispatches the workflow. It reads `GITHUB_TOKEN` from the ignored `.env` when needed and never adds that file to Git.
+Pushes to `main` run `.github/workflows/pages.yml`: API dependency installation, tests, public build, credential checks and GitHub Pages deployment.
 
-Expected URL: `https://<owner>.github.io/sap-service/`. Confirm a successful deployment and live browser review before treating this as published.
+The manual **Deploy private form service** workflow uses GitHub OIDC to assume a dedicated, limited AWS deployment role. Broad AWS access keys are not stored in GitHub. It deploys the service, checks its health, then publishes the website with the verified endpoint.
+
+`npm run deploy` can provision the service using local authorized AWS credentials, push source, configure Pages, wait for Actions and verify the live URL. It reads the ignored `.env` when needed. See [operations](docs/operations.md).
 
 ## Structure
 
 ```text
-src/                     UI, Canadian EN/FR content, estimation and form modules
-public/                  Public imagery, brand icon, sample plan and endpoint config
-api/                     Private Worker service and database schema
-scripts/                 Preview, build, checks and deployment helpers
-tests/                  Node test suite
-.github/workflows/       Pages and private-service workflows
-docs/                   Asset provenance and operations
-appednix/                Original local materials and Claude export (ignored)
+src/                  UI, bilingual content, estimation, forms and inbox
+public/               Public imagery, brand, fonts, sample plan and endpoint config
+api/                  Private API, validation, AWS provisioning and dependency lock
+scripts/              Preview, build, checks and deployment helpers
+tests/                Node tests and local Chrome harness
+.github/workflows/    Pages and OIDC service deployment
+docs/                 Operations, verification and asset provenance
+appednix/             Original local material and archived prototypes (ignored)
 ```
 
-The original design is preserved under `appednix/legacy/`. Planning material, `.env`, browser state, private admin tokens and build output are ignored. The build copies only `index.html`, `src/` and `public/`.
+The original Claude design is preserved under `appednix/legacy/`. Planning material, `.env`, browser state, private admin keys, installed dependencies and build output are ignored. The build uses an explicit public allowlist and versions browser modules together to avoid stale deployment combinations.
 
-## Content
-
-Supplied details: founded in 2020, Montréal, Frank Sungwa, 514-294-3063, servicesapinc@gmail.com. Unverified hospital/contractor relationships, fictional testimonials, certifications and performance claims are not published as facts. Architectural imagery is labelled representative. See [asset provenance](docs/assets.md).
+Business details come from the supplied materials: founded in 2020, Montréal, Frank Sungwa, 514-294-3063 and servicesapinc@gmail.com. Unverified hospital/contractor relationships, fictional testimonials, certifications and performance claims are not published as facts. See [asset provenance](docs/assets.md) and [verification](docs/verification.md).

@@ -1,5 +1,6 @@
 {
-  "apiUrl": "",
+  "apiUrl": "https://nh3oo4scqlpl4iclycmdpszwgm0opafv.lambda-url.ca-central-1.on.aws",
   "bookingUrl": "https://schedule.projecthamburg.com/booking/sap-service-cleanup",
-  "turnstileSiteKey": ""
+  "turnstileSiteKey": "",
+  "uploadMode": "direct"
 }

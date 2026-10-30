@@ -1,16 +1,17 @@
-# Verification record
+# Verification
 
-Checked locally on October 30, 2026.
+Current release: October 30, 2026.
 
-- **26 Node tests pass:** estimate reconciliation, units, sample-plan totals, minimums, site modifiers, visits, upload validation, consent, rate limits, private storage success and rollback, and protected retrieval.
-- **Public build and syntax checks pass.** Public artifacts are copied from an explicit allowlist and scanned for credential patterns. `.env`, planning materials, browser state and local admin credentials are excluded.
-- **43 browser checks passed in Google Chrome:** inline estimate and calendar presence; phase tabs and keyboard navigation; sector filters; ten editable sample rooms totaling 1,500 square feet; metric conversion; room creation/removal; attachment rejection and retention; result generation; save privacy; quotation dialog; five comparison selections; slider interaction; mobile menu; theme switching; careers fields, availability and résumé handling; Canadian French switching; preservation of application data across language changes; privacy navigation; and horizontal overflow checks at 360, 390, 768, 1024 and 1440 pixels in English and French.
-- **Five generated image pairs were visually inspected.** They are labelled illustrative and do not claim visitor-image transformation or completed SAP contracts.
+The website is published at https://projecthamburg.github.io/sap-service/ through GitHub Actions. The private API is deployed in AWS Canada Central; its identifiers are in `api/deployment.json`.
 
-The temporary local browser test page is ignored and excluded from the public build. Its detailed JSON report is retained locally under `.local/browser-qa-report.json`. Reproduce the browser checks with `npm run dev`, then `npm run test:browser` in another terminal. The harness source is `tests/browser-qa.html`; its DOM rasterization helper loads only in this local test page, not in the published website.
+Completed checks:
 
-Four DOM rasterizations of Chrome’s computed layout were reviewed: English desktop, French desktop, English mobile light, and English mobile dark. They are retained under `.local/` and do not verify cross-origin calendar content.
+- Estimation, units, common-area accounting, room totals, visits, condition modifiers, minimums, saved-scope privacy and upload validation.
+- Private API contracts, consent, signed upload manifests, pending/received separation, file signature and metadata rejection, completion tokens, idempotency, server-side price recalculation, CORS and authenticated administration.
+- 31 live cloud checks, including a genuine 7 MB synthetic PDF, a site photograph and a résumé; signed uploads, validated receipt, byte-for-byte downloads, blocked raw object URLs, invalid-file rejection and deletion of every synthetic record. Notifications were suppressed for these tests.
+- A local Chrome harness exercised the inline estimator, phase keyboard navigation, sector filters, sample rooms, conversion, additions/removals, upload rejection/retention, price generation, quote dialog, comparisons, themes, careers, language switching and French/English horizontal overflow at 360, 390, 768, 1024 and 1440 pixels.
+- Syntax, referenced assets, a public-file allowlist and credential-pattern scans. `.env`, browser state, private admin keys, original planning material and installed dependencies are excluded from publication.
 
-Still unverified: third-party calendar slot selection and framing, live Cloudflare credentials/provisioning, GitHub repository creation/push, and a completed Pages deployment. This session's outbound command execution is restricted, escalation was rejected by the approval policy, and the OpenChrome connection closed. Git also refused to write `.git/index.lock` during the final commit attempt. The initial rebuild commit exists; later source improvements remain in the working directory and the packaged source archive. No deployed URL is asserted without a successful deployment result.
+Final native screenshot review, connected browser submissions, live calendar interaction and the OIDC service-deployment workflow are being verified for the connected release. Detailed local reports and screenshots are retained in `.local/` and are not public artifacts.
 
-`npm run deploy` is prepared to use the local ignored `.env`, create the GitHub repository, attempt the private form-service deployment, push the source, enable Pages Actions, wait for the workflow and verify the returned live URL when run in an environment with the required access. If private service provisioning fails, the published form flow remains explicitly email-based.
+To reproduce: `npm --prefix api ci`, `npm test`, `npm run build`, `npm run check`. Run `npm run dev`, then `npm run test:browser` for the local Chrome harness. See `docs/operations.md` for the private service and administrative workflow.

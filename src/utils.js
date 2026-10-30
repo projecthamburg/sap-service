@@ -125,3 +125,58 @@ export const selectField = (label, name, value, options, full = false) =>
         }>${escapeHTML(text)}</option>`
     )
     .join("")}</select></label>`;
+
+export function installLocalizedValidation(root) {
+  root.addEventListener(
+    "invalid",
+    (event) => {
+      const field = event.target;
+      if (typeof field.setCustomValidity !== "function") return;
+      const french = document.documentElement.lang.startsWith("fr");
+      let message = french
+        ? "Vérifiez la valeur de ce champ."
+        : "Please check this field.";
+      if (field.validity.valueMissing)
+        message = french
+          ? field.type === "checkbox"
+            ? "Veuillez cocher cette case pour continuer."
+            : field.type === "file"
+            ? "Veuillez choisir un fichier."
+            : "Veuillez remplir ce champ."
+          : field.type === "checkbox"
+          ? "Please check this box to continue."
+          : field.type === "file"
+          ? "Please choose a file."
+          : "Please complete this field.";
+      else if (field.type === "email")
+        message = french
+          ? "Veuillez entrer une adresse courriel valide."
+          : "Please enter a valid email address.";
+      else if (field.validity.rangeUnderflow)
+        message = french
+          ? `La valeur minimale est ${field.min}.`
+          : `The minimum value is ${field.min}.`;
+      else if (field.validity.rangeOverflow)
+        message = french
+          ? `La valeur maximale est ${field.max}.`
+          : `The maximum value is ${field.max}.`;
+      field.setCustomValidity(message);
+      field.setAttribute("aria-invalid", "true");
+    },
+    true
+  );
+  root.addEventListener("input", (event) => {
+    const field = event.target;
+    if (typeof field.setCustomValidity === "function") {
+      field.setCustomValidity("");
+      if (field.validity.valid) field.removeAttribute("aria-invalid");
+    }
+  });
+  root.addEventListener("change", (event) => {
+    const field = event.target;
+    if (typeof field.setCustomValidity === "function") {
+      field.setCustomValidity("");
+      if (field.validity.valid) field.removeAttribute("aria-invalid");
+    }
+  });
+}

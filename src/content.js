@@ -651,11 +651,11 @@ export const content = {
         ],
         [
           "Requests and applications",
-          "If direct submission is available, the information and attachments you submit are sent to SAP’s private service for scope review or recruitment. Files are not publicly listed. Direct submissions and their attachments are automatically deleted after 90 days. If email submission is shown, your email app handles delivery; the site does not claim that a prepared draft has been received.",
+          "Information and attachments you submit are sent to SAP’s private service for scope review or recruitment. Records and files are stored in AWS’s Canada Central region and are not publicly listed. Automatic expiry is configured for 90 days; earlier deletion can be requested. An on-screen reference confirms receipt only after the files have been checked and the request recorded.",
         ],
         [
           "Third-party services",
-          "The embedded calendar is operated by Project Hamburg and processes booking information under its own terms. Fonts are served locally. The website uses no advertising or analytics trackers.",
+          "The embedded calendar is operated by Project Hamburg and processes booking information under its own terms. Resend processes email notifications to SAP, including contact and project or application details; notification processing may occur outside Canada. Attached plans and résumés remain in private storage. Fonts are served from this website; there are no advertising or analytics trackers.",
         ],
         [
           "Retention and your choices",
@@ -1342,11 +1342,11 @@ export const content = {
         ],
         [
           "Demandes et candidatures",
-          "Si l’envoi direct est disponible, vos renseignements et fichiers sont transmis au service privé de SAP pour la révision de portée ou le recrutement. Les fichiers ne sont pas publics. Les demandes directes et leurs fichiers sont supprimés automatiquement après 90 jours. Si l’envoi par courriel est proposé, votre application gère la transmission; un brouillon préparé n’est pas présenté comme reçu.",
+          "Vos renseignements et fichiers sont transmis au service privé de SAP pour la révision de portée ou le recrutement. Les dossiers et fichiers sont conservés dans la région AWS Canada Central, sans accès public. Une expiration automatique de 90 jours est configurée; une suppression anticipée peut être demandée. Une référence à l’écran confirme la réception après validation des fichiers et enregistrement de la demande.",
         ],
         [
           "Services tiers",
-          "Le calendrier intégré est exploité par Project Hamburg selon ses modalités. Les polices sont hébergées localement. Le site n’utilise aucun traceur publicitaire ou analytique.",
+          "Le calendrier intégré est exploité par Project Hamburg selon ses modalités. Resend traite les notifications à SAP, y compris les coordonnées et renseignements du projet ou de la candidature; ce traitement peut avoir lieu hors du Canada. Les plans et CV joints restent dans le stockage privé. Les polices sont hébergées sur ce site, sans traceur publicitaire ou analytique.",
         ],
         [
           "Conservation et choix",

@@ -1,52 +1,63 @@
 # Operations
 
-## Website deployment
+## Hosting and release
 
-GitHub Pages serves only `dist/`, built from an explicit allowlist. The Pages workflow uses Node 22, built-in tests and official Pages actions. Enable **Settings → Pages → Source → GitHub Actions** before the first run, or use `npm run deploy`.
+Website: https://projecthamburg.github.io/sap-service/. Repository: https://github.com/projecthamburg/sap-service.
 
-Relative assets and hash routes support the repository subpath. Routes include `#/en/careers`, `#/fr/careers`, `#/en/privacy`, `#/fr/terms`. Homepage anchors include `#services`, `#projects`, `#approach`, `#estimate`, `#consultation`.
+GitHub Pages serves only `dist/`, built from `index.html`, `src/` and `public/`. Hash routes work at the repository subpath. Every browser module, stylesheet and configuration receives a release version; the active public configuration is also embedded safely in the built HTML to avoid an email-fallback flash during startup.
 
-## Private form service
+`pages.yml` tests and deploys pushes to `main`. `service.yml` is a manual private-service deployment followed by a Pages publication. Private-service dependencies are installed from `api/package-lock.json`.
 
-Worker: `sap-service-api`. D1: `sap-service-requests`. Private R2 bucket: `sap-service-private-files`. Provisioning is idempotent by name. R2 must be available in the account; provisioning does not make files public.
+## Private infrastructure
 
-Secrets for the manual **Deploy private form service** workflow:
+The dedicated AWS resources are recorded in `api/deployment.json`:
 
-| Name                    | Purpose                                                      |
-| ----------------------- | ------------------------------------------------------------ |
-| `CLOUDFLARE_API_TOKEN`  | Dedicated Worker, D1 and R2 provisioning                     |
-| `CLOUDFLARE_ACCOUNT_ID` | Target account                                               |
-| `SAP_ADMIN_TOKEN`       | Random value of at least 32 characters for private retrieval |
-| `SAP_RATE_SALT`         | Separate random value for hashed rate-limit identifiers      |
-| `RESEND_API_KEY`        | Optional notifications                                       |
-| `TURNSTILE_SECRET_KEY`  | Optional bot verification                                    |
+- Region: `ca-central-1` (Canada Central).
+- Lambda: `sap-service-api`, Node.js 22, 256 MB, 30-second timeout.
+- DynamoDB: `sap-service-submissions`, on-demand billing and expiry through TTL.
+- S3: the dedicated `sap-service-private-…-ca-central-1` bucket, encrypted with public access blocked.
+- A resource-scoped runtime role and a separate GitHub deployment role.
 
-Variables: `SAP_NOTIFICATION_FROM` must use a verified Resend sender domain. Notifications stay disabled unless sender, recipient and provider are configured. `TURNSTILE_SITE_KEY` is the public key associated with the verification secret, when enabled.
+No other application resources are modified. The GitHub role can update only this function and pass only its execution role. OIDC trust is restricted to `repo:projecthamburg/sap-service:environment:production-api`. No broad AWS access keys are held in the repository or its secrets.
 
-Local provisioning reads `.env`; a generated local admin token is saved with restrictive permissions in ignored `.local/api-admin-token`. CI requires a durable admin secret. No service secret is placed in a browser file.
+Encrypted GitHub secrets are `SAP_ADMIN_TOKEN`, `SAP_RATE_SALT` and `RESEND_API_KEY`. Variables are `SAP_AWS_DEPLOY_ROLE` and `SAP_NOTIFICATION_FROM`. Initial local provisioning prefers the supplied business AWS credentials and saves the generated application secrets with restrictive permissions in ignored `.local/aws-service-secrets.json`. Do not commit or share that file publicly.
 
-Provisioning health-checks the endpoint before updating `public/site-config.json`. The workflow rebuilds and publishes the site with that verified endpoint.
+## Requests, applications and files
 
-## Submission handling
+1. The visitor consents and submits a quote request or application.
+2. `POST /v1/{quote|application}/prepare` validates the payload and file manifest, applies the public request limit and issues an individual signed S3 form for each attachment.
+3. The browser uploads directly to private storage. Signed forms restrict key, type, size and expiry.
+4. `POST /v1/{quote|application}/complete` verifies the completion token, object metadata and file signatures, then changes the pending record to received and returns a reference. Repeated completion is idempotent.
+5. A Resend notification to servicesapinc@gmail.com includes contact and scope/application details, with a link to the authenticated inbox. Attachments remain private.
 
-`POST /v1/quote` and `POST /v1/application` accept multipart JSON `payload` and `files`. Success returns a reference. Quotation inputs are preliminary and require a scope review before a commercial commitment.
+Project files: PDF/JPEG/PNG/WEBP, up to six files, 10 MB each and 25 MB total. Résumés: one PDF or DOCX, up to 5 MB. Large uploads do not pass through the Lambda request-body limit. Uploaded plans are not automatically measured, and photographs are not silently transformed.
 
-Files receive extension, MIME, signature and size validation. Résumés must be PDF or DOCX packages. Project attachments accept PDF/JPEG/PNG/WEBP: six files, 10 MB each, **25 MB total**. Résumés: one file, 5 MB. Signature checking is not malware scanning; treat downloads as untrusted and use an appropriate operational scanner before opening them.
+Signature/type validation is not a malware-scanning service. Treat downloaded files as untrusted and use an appropriate operational scanner before opening them.
 
-Authenticated `GET /admin/submissions` lists records. `GET /admin/files/<encoded-object-key>` retrieves an attachment. Both require the private admin bearer token. Files download as attachments and are never rendered inline. Do not embed the token in public code or a query string.
+Public preparations are limited to eight per 15-minute period per hashed IP identifier. Limiter records expire. Log retention is 14 days; payloads and attachments are not intentionally logged.
 
-Submissions and attachments expire after 90 days. A daily 05:00 UTC Worker removes up to 100 expired records and their files. Requests are limited to eight per 15-minute window per hashed IP identifier; expired counters are cleaned daily. Payloads and attachments are not intentionally logged.
+## Private inbox
 
-SAP’s contact for access, correction or deletion is servicesapinc@gmail.com. Earlier deletion is performed through authenticated Cloudflare administration, including both the record and its private files. Never share applicant data in public issues.
+Open `https://projecthamburg.github.io/sap-service/#/en/inbox` (or `#/fr/inbox`). Obtain the operator's private access key from the ignored local secret file, then sign in. The key remains only in that tab's memory and is cleared by Sign out or closing the tab. It is not embedded in the public website, localStorage, a URL or notification messages.
 
-## Estimates
+The inbox lists received submissions and provides private downloads. `GET /admin/submissions` requires the admin bearer token. `POST /admin/file-url` issues a 60-second signed download URL only for a file attached to the requested received record. Files download as attachments. `DELETE /admin/submissions/<reference>` removes the selected record and its private objects for an authorized deletion request.
 
-Assumptions in `src/pricing.js` are illustrative, not approved SAP pricing. The model uses phase production, site/surface factors, fixture quantities, visits, travel, allowances, overhead, markup and a planning range. Common areas are included in total area once. Cost components and phase allocations reconcile to the midpoint. The lower bound respects the illustrative minimum charge.
+S3 lifecycle expiry is configured at 90 days. DynamoDB TTL marks records for automatic deletion at 90 days; provider deletion is asynchronous. Earlier deletion requests should be handled through the authenticated API. SAP’s contact for access, correction and deletion is servicesapinc@gmail.com. Never put private applicant data or floor plans into a public issue.
 
-## Calendar
+## Notifications and testing
 
-The inline homepage calendar embeds `https://schedule.projecthamburg.com/booking/sap-service-cleanup`, with external fallback and contact details. It loads near the viewport. An iframe load event alone cannot prove booking works. Verify provider framing and actual slot selection before marking this integration tested.
+The configured sender is `SAP Service <sap-service@projecthamburg.com>`, on the verified projecthamburg.com Resend domain. The business recipient is the supplied servicesapinc@gmail.com address. Email notification processing can occur outside Canada; the privacy notice identifies this. Receipt in storage is not dependent on notification delivery.
 
-## Browser verification
+Synthetic end-to-end tests authenticate preparations with the admin token and `X-SAP-Test: true`. Those records are marked as tests, bypass public rate quotas and suppress notifications. The test credential is never sent to any host other than this API. Remove every synthetic record after verification. A `testMode` flag confirms suppression before browser tests allow completion.
 
-Review 360, 390, 768, 1024 and 1440 px widths, both languages and themes. Exercise room/project calculation, sample data, saving/restoring, PDF printing, file rejection, careers availability, validation, booking, mobile navigation, keyboard focus and reduced motion. Node checks do not replace a rendered browser review.
+## Estimates and booking
+
+`src/pricing.js` contains illustrative assumptions, not SAP-approved commercial rates. The private service recomputes planning totals from the submitted scope. A written quotation remains necessary.
+
+The supplied Project Hamburg calendar is embedded inline, with an external fallback and real contact details. Verify its live provider state without submitting an appointment during automated QA.
+
+## Maintenance
+
+For a new checkout, run `npm --prefix api ci`. The frontend itself requires no framework installation. `npm test`, `npm run build` and `npm run check` cover the maintained source and public output. For a full local browser pass, keep `npm run dev` running and launch `npm run test:browser`. Use Google Chrome for native screenshot and deployed-form checks.
+
+Update only the dedicated resources. Preserve the runtime role's limited permissions, bucket public-access blocks, signed-upload constraints, expiry settings and exclusion of all private material from Git and public artifacts.

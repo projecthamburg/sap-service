@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
+import { access } from "node:fs/promises";
 if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN)
   try {
     process.loadEnvFile(".env");
@@ -21,6 +22,11 @@ function run(command, args, { capture = false, input } = {}) {
     );
   return result.stdout?.trim();
 }
+try {
+  await access("api/node_modules/@aws-sdk/client-s3/package.json");
+} catch {
+  run("npm", ["--prefix", "api", "ci"]);
+}
 run("npm", ["test"]);
 run("npm", ["run", "build"]);
 run("npm", ["run", "check"]);
@@ -40,15 +46,9 @@ if (existing.status !== 0)
     "--description",
     "SAP Service Inc. — Construction cleaning · Montréal, Québec & Ontario",
   ]);
-if (env.CLOUDFLARE_API_TOKEN && env.CLOUDFLARE_ACCOUNT_ID) {
-  const service = spawnSync(process.execPath, ["scripts/provision-api.mjs"], {
-    env,
-    stdio: "inherit",
-  });
-  if (service.status !== 0)
-    console.warn(
-      "Private service was not activated. The website will clearly use the email-draft submission flow until service deployment succeeds."
-    );
+if (env.AWS_BUSINESS_ACCESS_KEY_ID || env.AWS_ACCESS_KEY_ID) {
+  run("npm", ["--prefix", "api", "ci"]);
+  run("node", ["api/provision-aws.mjs"]);
   run("npm", ["run", "build"]);
   run("npm", ["run", "check"]);
 }

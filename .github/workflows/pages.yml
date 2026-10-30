@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install private API test dependencies
+        run: npm --prefix api ci --omit=dev --ignore-scripts
       - name: Test estimation, uploads, privacy and service handlers
         run: npm test
       - name: Build only public files

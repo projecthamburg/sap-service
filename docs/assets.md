@@ -13,9 +13,9 @@ The six architectural photographs came from the user’s `appednix/planning-asse
 
 The SVG monogram in `src/icons.js` follows the supplied SAP brand, including its sloping central A. The fictional bilingual sample drawing is original vector artwork: ten non-overlapping rectangles totaling 1,500 square feet inside a 50-by-30-foot outline, matching `src/model.js`. It is not a construction document.
 
-`public/images/cleaning-comparison.png` was made with the built-in image generation tool and is labelled illustrative. CSS presents its two halves as an interactive cleaning comparison. Visitor uploads are not presented as transformed results.
+`public/images/cleaning-comparison.jpg` was made with the built-in image generation tool and is labelled illustrative. CSS presents its two halves as an interactive cleaning comparison. Visitor uploads are not presented as transformed results.
 
-The same built-in tool generated `public/images/cleaning-fitness.png`, `public/images/cleaning-restaurant.png`, `public/images/cleaning-healthcare.png` and `public/images/cleaning-office.png`. The website offers all five as selectable examples. Each is a paired illustration of cleaning conditions in the same architecture.
+The same built-in tool generated `public/images/cleaning-fitness.jpg`, `public/images/cleaning-restaurant.jpg`, `public/images/cleaning-healthcare.jpg` and `public/images/cleaning-office.jpg`. The website offers all five as selectable examples. Each is a paired illustration of cleaning conditions in the same architecture.
 
 Additional final prompts:
 

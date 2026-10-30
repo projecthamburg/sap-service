@@ -1,10 +1,16 @@
 import { content } from "./content.js";
 import { icon, logo } from "./icons.js";
-import { escapeHTML as esc, store } from "./utils.js";
+import {
+  escapeHTML as esc,
+  store,
+  installLocalizedValidation,
+} from "./utils.js";
 import { Estimator } from "./estimator.js";
 import { mountCareers } from "./careers.js";
+import { mountInbox } from "./inbox.js";
 
 const app = document.getElementById("app");
+installLocalizedValidation(document);
 let language = /^#\/fr\//.test(location.hash)
   ? "fr"
   : /^#\/en\//.test(location.hash)
@@ -16,38 +22,52 @@ let estimator;
 let bookingObserver;
 let bookingTimer;
 const comparisonImages = {
-  condo: "cleaning-comparison.png",
-  fitness: "cleaning-fitness.png",
-  restaurant: "cleaning-restaurant.png",
-  healthcare: "cleaning-healthcare.png",
-  office: "cleaning-office.png",
+  condo: "cleaning-comparison.jpg",
+  fitness: "cleaning-fitness.jpg",
+  restaurant: "cleaning-restaurant.jpg",
+  healthcare: "cleaning-healthcare.jpg",
+  office: "cleaning-office.jpg",
 };
 export const config = {
   apiUrl: "",
+  uploadMode: "multipart",
   bookingUrl: "https://schedule.projecthamburg.com/booking/sap-service-cleanup",
   turnstileSiteKey: "",
 };
-fetch("./site-config.json")
-  .then((r) => (r.ok ? r.json() : {}))
-  .then((value) => {
-    // Public endpoints only. A compromised config cannot inject markup or javascript: URLs.
-    if (
-      typeof value.apiUrl === "string" &&
-      /^https:\/\/[a-z0-9.-]+(?:\/[^\s]*)?$/.test(value.apiUrl)
-    )
-      config.apiUrl = value.apiUrl.replace(/\/$/, "");
-    if (
-      typeof value.bookingUrl === "string" &&
-      value.bookingUrl.startsWith("https://schedule.projecthamburg.com/")
-    )
-      config.bookingUrl = value.bookingUrl;
-    if (
-      typeof value.turnstileSiteKey === "string" &&
-      /^[a-zA-Z0-9_-]+$/.test(value.turnstileSiteKey)
-    )
-      config.turnstileSiteKey = value.turnstileSiteKey;
-  })
-  .catch(() => {});
+function applyPublicConfig(value) {
+  // Public endpoints only. A compromised config cannot inject markup or javascript: URLs.
+  if (
+    typeof value.apiUrl === "string" &&
+    /^https:\/\/[a-z0-9.-]+(?:\/[^\s]*)?$/.test(value.apiUrl)
+  )
+    config.apiUrl = value.apiUrl.replace(/\/$/, "");
+  if (["direct", "multipart"].includes(value.uploadMode))
+    config.uploadMode = value.uploadMode;
+  if (
+    typeof value.bookingUrl === "string" &&
+    value.bookingUrl.startsWith("https://schedule.projecthamburg.com/")
+  )
+    config.bookingUrl = value.bookingUrl;
+  if (
+    typeof value.turnstileSiteKey === "string" &&
+    /^[a-zA-Z0-9_-]+$/.test(value.turnstileSiteKey)
+  )
+    config.turnstileSiteKey = value.turnstileSiteKey;
+}
+const embeddedConfig = document.getElementById("site-config");
+if (embeddedConfig) {
+  try {
+    applyPublicConfig(JSON.parse(embeddedConfig.textContent));
+  } catch {}
+} else {
+  fetch("./site-config.json")
+    .then((response) => (response.ok ? response.json() : {}))
+    .then(applyPublicConfig)
+    .catch(() => {})
+    .finally(() => {
+      if (["careers", "inbox"].includes(activePage)) render(true);
+    });
+}
 
 function header(t) {
   return `<a class="skip-link" href="#main">${t.skip}</a>
@@ -66,7 +86,11 @@ function header(t) {
         language === "fr" ? "Navigation principale" : "Main navigation"
       }">${t.nav
     .map((label, i) => `<a href="${t.navLinks[i]}">${label}</a>`)
-    .join("")}</nav>
+    .join("")}<a class="mobile-nav-action" href="#estimate">${
+    t.getEstimate
+  }${icon("diagonal")}</a><a class="mobile-nav-action" href="#consultation">${
+    t.book
+  }${icon("diagonal")}</a></nav>
       <div class="nav-actions"><button class="language-toggle" data-action="language" aria-label="${
         t.otherLabel
       }">${
@@ -360,7 +384,8 @@ function legal(t, page) {
 }
 function currentPage() {
   return (
-    location.hash.match(/^#\/(?:en|fr)\/(careers|privacy|terms)/)?.[1] || "home"
+    location.hash.match(/^#\/(?:en|fr)\/(careers|privacy|terms|inbox)/)?.[1] ||
+    "home"
   );
 }
 function render(force = false) {
@@ -384,7 +409,11 @@ function render(force = false) {
   const t = content[language];
   document.documentElement.lang = t.lang;
   document.title = `SAP Service Inc. — ${
-    page === "careers"
+    page === "inbox"
+      ? language === "fr"
+        ? "Boîte de réception privée"
+        : "Private inbox"
+      : page === "careers"
       ? t.footer.careers
       : page === "privacy"
       ? t.legal.privacyTitle
@@ -406,11 +435,13 @@ function render(force = false) {
     header(t) +
     (page === "home"
       ? home(t)
-      : page === "careers"
+      : page === "careers" || page === "inbox"
       ? '<main id="main" tabindex="-1"></main>'
       : legal(t, page)) +
     footer(t);
-  if (page === "home") {
+  if (page === "inbox") {
+    mountInbox(document.getElementById("main"), language, config, t);
+  } else if (page === "home") {
     if (!estimator) estimator = new Estimator(config);
     estimator.mount(document.getElementById("estimator"), language);
     mountBooking(t);
@@ -501,6 +532,10 @@ app.addEventListener("click", (event) => {
   if (target.dataset.action === "menu") {
     const open = target.getAttribute("aria-expanded") !== "true";
     target.setAttribute("aria-expanded", String(open));
+    target.setAttribute(
+      "aria-label",
+      open ? content[language].close : content[language].menu
+    );
     document.getElementById("main-nav").classList.toggle("is-open", open);
     target.innerHTML = icon(open ? "close" : "menu");
   }
@@ -549,6 +584,7 @@ app.addEventListener("click", (event) => {
     document.getElementById("main-nav")?.classList.remove("is-open");
     const menu = document.querySelector(".menu-toggle");
     menu?.setAttribute("aria-expanded", "false");
+    menu?.setAttribute("aria-label", content[language].menu);
     if (menu) menu.innerHTML = icon("menu");
   }
 });
@@ -582,6 +618,11 @@ app.addEventListener("keydown", (event) => {
     document
       .querySelector(".menu-toggle")
       ?.setAttribute("aria-expanded", "false");
+    const menu = document.querySelector(".menu-toggle");
+    if (menu) {
+      menu.innerHTML = icon("menu");
+      menu.setAttribute("aria-label", content[language].menu);
+    }
   }
 });
 app.addEventListener("input", (event) => {
