@@ -50,7 +50,7 @@ export const content = {
             "Work areas and circulation routes",
             "Preparation for finishing trades",
           ],
-          image: "construction.jpg",
+          image: "construction.webp",
         },
         {
           key: "final",
@@ -66,7 +66,7 @@ export const content = {
             "Washrooms, kitchens and common areas",
             "Doors, frames and accessible detailing",
           ],
-          image: "residential.jpg",
+          image: "residential.webp",
         },
         {
           key: "touchup",
@@ -82,7 +82,7 @@ export const content = {
             "Presentation of high-visibility areas",
             "Agreed pre-occupancy finishing scope",
           ],
-          image: "glazing.jpg",
+          image: "glazing.webp",
         },
       ],
     },
@@ -103,7 +103,7 @@ export const content = {
           filter: "public",
           name: "Healthcare & institutional",
           scope: "Corridors, common areas & finished interiors",
-          image: "glazing.jpg",
+          image: "glazing.webp",
           tag: "PUBLIC & INSTITUTIONAL",
         },
         {
@@ -111,7 +111,7 @@ export const content = {
           filter: "residential",
           name: "Condominiums & multi-residential",
           scope: "Units, lobbies & floor-by-floor turnover",
-          image: "residential.jpg",
+          image: "residential.webp",
           tag: "RESIDENTIAL",
         },
         {
@@ -119,7 +119,7 @@ export const content = {
           filter: "commercial",
           name: "Commercial fit-outs",
           scope: "Tenant improvements & renovation handovers",
-          image: "fitout.jpg",
+          image: "fitout.webp",
           tag: "COMMERCIAL",
         },
         {
@@ -127,7 +127,7 @@ export const content = {
           filter: "commercial",
           name: "Restaurants & hospitality",
           scope: "Kitchens, dining spaces & opening preparation",
-          image: "lobby.jpg",
+          image: "lobby.webp",
           tag: "HOSPITALITY",
         },
         {
@@ -135,7 +135,7 @@ export const content = {
           filter: "commercial",
           name: "Fitness & recreation",
           scope: "Training floors, glazing & changing areas",
-          image: "fitness.jpg",
+          image: "fitness.webp",
           tag: "FITNESS",
         },
         {
@@ -143,7 +143,7 @@ export const content = {
           filter: "commercial",
           name: "Offices & shared spaces",
           scope: "Workplaces, circulation & client-facing spaces",
-          image: "lobby.jpg",
+          image: "lobby.webp",
           tag: "OFFICES & RETAIL",
         },
       ],
@@ -740,7 +740,7 @@ export const content = {
             "Aires de travail et voies de circulation",
             "Préparation pour les travaux de finition",
           ],
-          image: "construction.jpg",
+          image: "construction.webp",
         },
         {
           key: "final",
@@ -756,7 +756,7 @@ export const content = {
             "Salles de bain, cuisines et aires communes",
             "Portes, cadres et détails accessibles",
           ],
-          image: "residential.jpg",
+          image: "residential.webp",
         },
         {
           key: "touchup",
@@ -772,7 +772,7 @@ export const content = {
             "Présentation des aires très visibles",
             "Finition avant occupation selon la portée",
           ],
-          image: "glazing.jpg",
+          image: "glazing.webp",
         },
       ],
     },
@@ -793,7 +793,7 @@ export const content = {
           filter: "public",
           name: "Santé et institutionnel",
           scope: "Corridors, aires communes et intérieurs finis",
-          image: "glazing.jpg",
+          image: "glazing.webp",
           tag: "PUBLIC ET INSTITUTIONNEL",
         },
         {
@@ -801,7 +801,7 @@ export const content = {
           filter: "residential",
           name: "Condominiums et multirésidentiel",
           scope: "Unités, halls et livraison par étage",
-          image: "residential.jpg",
+          image: "residential.webp",
           tag: "RÉSIDENTIEL",
         },
         {
@@ -809,7 +809,7 @@ export const content = {
           filter: "commercial",
           name: "Aménagements commerciaux",
           scope: "Améliorations locatives et livraisons",
-          image: "fitout.jpg",
+          image: "fitout.webp",
           tag: "COMMERCIAL",
         },
         {
@@ -817,7 +817,7 @@ export const content = {
           filter: "commercial",
           name: "Restauration et hôtellerie",
           scope: "Cuisines, salles et préparation à l’ouverture",
-          image: "lobby.jpg",
+          image: "lobby.webp",
           tag: "HÔTELLERIE",
         },
         {
@@ -825,7 +825,7 @@ export const content = {
           filter: "commercial",
           name: "Entraînement et loisirs",
           scope: "Plateaux, vitrage et vestiaires",
-          image: "fitness.jpg",
+          image: "fitness.webp",
           tag: "ENTRAÎNEMENT",
         },
         {
@@ -833,7 +833,7 @@ export const content = {
           filter: "commercial",
           name: "Bureaux et espaces partagés",
           scope: "Lieux de travail, circulation et accueil",
-          image: "lobby.jpg",
+          image: "lobby.webp",
           tag: "BUREAUX ET COMMERCES",
         },
       ],

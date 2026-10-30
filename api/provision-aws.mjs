@@ -7,6 +7,7 @@ import {
   IAMClient,
   GetRoleCommand,
   CreateRoleCommand,
+  UpdateAssumeRolePolicyCommand,
   PutRolePolicyCommand,
   ListOpenIDConnectProvidersCommand,
   CreateOpenIDConnectProviderCommand,
@@ -81,7 +82,14 @@ const policy = (statements) =>
   JSON.stringify({ Version: "2012-10-17", Statement: statements });
 async function ensureRole(name, trust) {
   try {
-    return (await iam.send(new GetRoleCommand({ RoleName: name }))).Role;
+    const role = (await iam.send(new GetRoleCommand({ RoleName: name }))).Role;
+    await iam.send(
+      new UpdateAssumeRolePolicyCommand({
+        RoleName: name,
+        PolicyDocument: JSON.stringify(trust),
+      })
+    );
+    return role;
   } catch (error) {
     if (error.name !== "NoSuchEntityException") throw error;
     return (
@@ -482,7 +490,8 @@ if (!existingOnly) {
           StringEquals: {
             "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
             "token.actions.githubusercontent.com:sub":
-              "repo:projecthamburg/sap-service:environment:production-api",
+              // GitHub's immutable subject includes the owner and repository IDs.
+              "repo:projecthamburg@79866271/sap-service@1440106954:environment:production-api",
           },
         },
       },
@@ -496,6 +505,7 @@ if (!existingOnly) {
         {
           Effect: "Allow",
           Action: [
+            "lambda:GetFunction",
             "lambda:GetFunctionConfiguration",
             "lambda:UpdateFunctionCode",
             "lambda:UpdateFunctionConfiguration",

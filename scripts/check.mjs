@@ -18,7 +18,7 @@ for (const dir of ["src", "scripts", "api"]) {
 }
 const expectedAssets = new Set([
   "brand/favicon.svg",
-  "images/lobby.jpg",
+  "images/lobby.webp",
   "images/sample-floor-plan.svg",
 ]);
 for (const language of Object.values(content)) {
@@ -28,10 +28,20 @@ for (const language of Object.values(content)) {
     expectedAssets.add(`images/${project.image}`);
 }
 const appSource = await readFile("src/app.js", "utf8");
+for (const name of await readdir("src")) {
+  if (!name.endsWith(".js")) continue;
+  const source = await readFile(join("src", name), "utf8");
+  for (const match of source.matchAll(/src=["']\.\/(images\/[^"'${}\s]+)["']/g))
+    expectedAssets.add(match[1]);
+}
 for (const match of appSource.matchAll(
   /["'](cleaning-[a-z-]+\.(?:png|jpg|webp))["']/g
 ))
   expectedAssets.add(`images/${match[1]}`);
+for (const image of [...expectedAssets]) {
+  if (image.endsWith(".webp") && !image.includes("cleaning-"))
+    expectedAssets.add(image.replace(".webp", "-640.webp"));
+}
 for (const asset of expectedAssets) {
   try {
     await access(join("public", asset));

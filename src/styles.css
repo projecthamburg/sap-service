@@ -1984,10 +1984,7 @@ input[type="checkbox"] {
 .comparison-image {
   position: absolute;
   inset: 0;
-  background-image: var(
-    --comparison-image,
-    url("../images/cleaning-comparison.jpg")
-  );
+  background-image: var(--comparison-image, none);
   background-size: 200% 100%;
   background-repeat: no-repeat;
 }
@@ -2169,7 +2166,7 @@ input[type="checkbox"] {
 .calendar-top > span:last-child {
   font-size: 8px;
   letter-spacing: 0.12em;
-  color: #728098;
+  color: #657082;
   margin-left: auto;
 }
 .calendar-frame {

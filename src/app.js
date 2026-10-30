@@ -21,12 +21,21 @@ let activePage = "";
 let estimator;
 let bookingObserver;
 let bookingTimer;
+let comparisonObserver;
+const photoWidths = {
+  "lobby.webp": 1536,
+  "construction.webp": 1024,
+  "glazing.webp": 1000,
+  "residential.webp": 1599,
+  "fitout.webp": 2048,
+  "fitness.webp": 2500,
+};
 const comparisonImages = {
-  condo: "cleaning-comparison.jpg",
-  fitness: "cleaning-fitness.jpg",
-  restaurant: "cleaning-restaurant.jpg",
-  healthcare: "cleaning-healthcare.jpg",
-  office: "cleaning-office.jpg",
+  condo: "cleaning-comparison.webp",
+  fitness: "cleaning-fitness.webp",
+  restaurant: "cleaning-restaurant.webp",
+  healthcare: "cleaning-healthcare.webp",
+  office: "cleaning-office.webp",
 };
 export const config = {
   apiUrl: "",
@@ -77,9 +86,11 @@ function header(t) {
     "diagonal"
   )}</a><span class="utility-region">${t.territory}</span></div></div>
     <header class="site-header"><div class="container nav-inner">
-      <a href="#" class="brand" aria-label="SAP Service Inc. · ${
-        language === "fr" ? "Accueil" : "Home"
-      }">${logo()}<span>SERVICE INC.<small>${
+      <a href="#" class="brand" aria-label="SAP Service Inc. ${
+        language === "fr" ? "Nettoyage de chantier" : "Construction cleaning"
+      } · ${
+    language === "fr" ? "Accueil" : "Home"
+  }">${logo()}<span>SERVICE INC.<small>${
     language === "fr" ? "NETTOYAGE DE CHANTIER" : "CONSTRUCTION CLEANING"
   }</small></span></a>
       <nav id="main-nav" class="main-nav" aria-label="${
@@ -92,8 +103,8 @@ function header(t) {
     t.book
   }${icon("diagonal")}</a></nav>
       <div class="nav-actions"><button class="language-toggle" data-action="language" aria-label="${
-        t.otherLabel
-      }">${
+        t.other
+      } — ${t.otherLabel}">${
     t.other
   }</button><span class="nav-divider"></span><button class="icon-button theme-toggle" data-action="theme" aria-label="${
     t.theme
@@ -151,7 +162,12 @@ function stageDetails(t, i) {
     "diagonal"
   )}</a></div><figure class="stage-photo"><img src="./images/${
     stage.image
-  }" alt="${esc(stage.name)} · ${
+  }" srcset="./images/${stage.image.replace(
+    ".webp",
+    "-640.webp"
+  )} 640w, ./images/${stage.image} ${
+    photoWidths[stage.image]
+  }w" sizes="(max-width: 760px) 100vw, 50vw" alt="${esc(stage.name)} · ${
     t.comparison.reference
   }" loading="lazy" width="900" height="650"><figcaption><span>${stage.num} / ${
     stage.tag
@@ -171,7 +187,7 @@ function home(t) {
     "arrow"
   )}</a></div><div class="hero-foot"><span class="status-dot"></span>${
     t.hero.note
-  }</div></div><figure class="hero-photo"><img src="./images/lobby.jpg" alt="${
+  }</div></div><figure class="hero-photo"><img src="./images/lobby.webp" srcset="./images/lobby-640.webp 640w, ./images/lobby.webp 1536w" sizes="(max-width: 760px) 100vw, 51vw" alt="${
     language === "fr"
       ? "Hall contemporain avec vitrage pleine hauteur et finitions de bois"
       : "Contemporary building lobby with full-height glazing and warm wood finishes"
@@ -230,13 +246,16 @@ function home(t) {
       (card, i) =>
         `<article class="project-card" data-sector="${
           card.filter
-        }"><a href="#estimate" data-category="${card.key}" aria-label="${esc(
-          card.name
-        )} — ${
-          t.projects.explore
+        }"><a href="#estimate" data-category="${
+          card.key
         }"><div class="project-photo"><img src="./images/${
           card.image
-        }" alt="${esc(card.name)} · ${
+        }" srcset="./images/${card.image.replace(
+          ".webp",
+          "-640.webp"
+        )} 640w, ./images/${card.image} ${
+          photoWidths[card.image]
+        }w" sizes="(max-width: 760px) 50vw, 33vw" alt="${esc(card.name)} · ${
           t.comparison.reference
         }" loading="lazy" width="800" height="560"><span class="project-tag">${
           card.tag
@@ -251,7 +270,7 @@ function home(t) {
     .join("")}</div><p class="image-disclosure">${icon("info")}${
     t.projects.reference
   }</p></div></section>
-    <section class="section approach-section" id="approach"><div class="container approach-grid"><div class="approach-visual"><img src="./images/construction.jpg" alt="${
+    <section class="section approach-section" id="approach"><div class="container approach-grid"><div class="approach-visual"><img src="./images/construction.webp" srcset="./images/construction-640.webp 640w, ./images/construction.webp 1024w" sizes="(max-width: 760px) 100vw, 40vw" alt="${
       language === "fr"
         ? "Intérieur commercial durant les travaux de finition"
         : "Commercial interior during the finishing trades"
@@ -430,6 +449,7 @@ function render(force = false) {
   document.querySelector('meta[property="og:locale"]').content =
     language === "fr" ? "fr_CA" : "en_CA";
   bookingObserver?.disconnect();
+  comparisonObserver?.disconnect();
   clearTimeout(bookingTimer);
   app.innerHTML =
     header(t) +
@@ -444,6 +464,7 @@ function render(force = false) {
   } else if (page === "home") {
     if (!estimator) estimator = new Estimator(config);
     estimator.mount(document.getElementById("estimator"), language);
+    mountComparison();
     mountBooking(t);
   } else if (page === "careers") {
     mountCareers(document.getElementById("main"), t, language, config);
@@ -471,6 +492,32 @@ function scrollToAnchor() {
       .getElementById(location.hash.slice(1))
       ?.scrollIntoView({ behavior: "instant", block: "start" });
   else if (!location.hash || location.hash === "#") window.scrollTo(0, 0);
+}
+function mountComparison() {
+  const view = document.querySelector(".comparison-view");
+  const load = () => {
+    const selected = document.querySelector(
+      '[data-comparison][aria-pressed="true"]'
+    );
+    view.style.setProperty(
+      "--comparison-image",
+      `url("./images/${
+        comparisonImages[selected?.dataset.comparison || "condo"]
+      }")`
+    );
+  };
+  if ("IntersectionObserver" in window) {
+    comparisonObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          load();
+          comparisonObserver.disconnect();
+        }
+      },
+      { rootMargin: "600px" }
+    );
+    comparisonObserver.observe(view);
+  } else load();
 }
 function mountBooking(t) {
   const iframe = document.getElementById("booking-frame");

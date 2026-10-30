@@ -18,7 +18,7 @@ The dedicated AWS resources are recorded in `api/deployment.json`:
 - S3: the dedicated `sap-service-private-…-ca-central-1` bucket, encrypted with public access blocked.
 - A resource-scoped runtime role and a separate GitHub deployment role.
 
-No other application resources are modified. The GitHub role can update only this function and pass only its execution role. OIDC trust is restricted to `repo:projecthamburg/sap-service:environment:production-api`. No broad AWS access keys are held in the repository or its secrets.
+No other application resources are modified. The GitHub role can update only this function and pass only its execution role. OIDC trust is restricted to the immutable identity `repo:projecthamburg@79866271/sap-service@1440106954:environment:production-api`, including GitHub's owner and repository IDs. No broad AWS access keys are held in the repository or its secrets.
 
 Encrypted GitHub secrets are `SAP_ADMIN_TOKEN`, `SAP_RATE_SALT` and `RESEND_API_KEY`. Variables are `SAP_AWS_DEPLOY_ROLE` and `SAP_NOTIFICATION_FROM`. Initial local provisioning prefers the supplied business AWS credentials and saves the generated application secrets with restrictive permissions in ignored `.local/aws-service-secrets.json`. Do not commit or share that file publicly.
 

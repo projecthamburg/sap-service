@@ -14,7 +14,9 @@ export function mountCareers(root, all, language, config) {
     t.back
   }</a><div class="careers-hero-copy"><p class="eyebrow">${t.eyebrow}</p><h1>${
     t.title
-  }</h1><p>${t.copy}</p></div></div><img src="./images/fitout.jpg" alt="${
+  }</h1><p>${
+    t.copy
+  }</p></div></div><img src="./images/fitout.webp" srcset="./images/fitout-640.webp 640w, ./images/fitout.webp 2048w" sizes="(max-width: 760px) 100vw, 50vw" alt="${
     language === "fr"
       ? "Intérieur commercial en préparation"
       : "Commercial interior in preparation"

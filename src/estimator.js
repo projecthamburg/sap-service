@@ -92,7 +92,7 @@ export class Estimator {
             i < s.step ? "complete" : i === s.step ? "current" : ""
           }"><button type="button" data-step="${i}" ${
             i > s.step ? "disabled" : ""
-          } aria-label="${t.step} ${i + 1}: ${label}" ${
+          } aria-label="${t.step} ${String(i + 1).padStart(2, "0")} ${label}" ${
             i === s.step ? 'aria-current="step"' : ""
           }><span>${
             i < s.step ? icon("check") : String(i + 1).padStart(2, "0")
