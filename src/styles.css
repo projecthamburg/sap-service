@@ -2033,6 +2033,14 @@ input[type="checkbox"] {
   outline: 3px solid var(--coral);
   outline-offset: 5px;
 }
+@supports selector(:has(*)) {
+  .comparison-view:focus-within {
+    outline-color: transparent;
+  }
+  .comparison-view:has(.comparison-slider:focus-visible) {
+    outline-color: var(--coral);
+  }
+}
 .comparison-label {
   position: absolute;
   bottom: 16px;

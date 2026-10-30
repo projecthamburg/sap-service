@@ -55,6 +55,10 @@ const matrix = [
 const report = [];
 const clean = (message) =>
   String(message)
+    .replaceAll(
+      Buffer.from(username + ":" + accessKey).toString("base64"),
+      "[redacted]"
+    )
     .replaceAll(accessKey, "[redacted]")
     .replaceAll(username, "[account]");
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -135,7 +139,7 @@ for (const device of matrix) {
         if (await execute(script)) return;
         await pause(500);
       }
-      throw Error("Page state did not become ready.");
+      throw Error("Page state did not become ready: " + script.slice(0, 150));
     };
     const capture = async (name) => {
       const image = (await request(`/session/${id}/screenshot`)).value;
@@ -274,25 +278,45 @@ for (const device of matrix) {
       check(language + " career photograph decodes", photo === true);
     }
     await request(`/session/${id}/url`, { url: site + "#consultation" });
+    await until('return Boolean(document.querySelector("#booking-frame"));');
+    await execute(
+      'document.querySelector("#booking-frame").scrollIntoView({block:"center",behavior:"instant"});'
+    );
     await until(
       'return Boolean(document.querySelector("#booking-frame")?.getAttribute("src"));'
     );
-    const frameElement = (
-      await request(`/session/${id}/element`, {
-        using: "css selector",
-        value: "#booking-frame",
-      })
-    ).value;
-    await request(`/session/${id}/frame`, { id: frameElement });
-    await until("return document.body.innerText.length>80;");
-    check(
-      "Embedded calendar renders",
-      await execute(
-        'return document.body.innerText.includes("SAP Service Inc.");'
-      )
-    );
-    await capture("calendar");
-    await request(`/session/${id}/frame`, { id: null });
+    if (device.name === "iphone-safari") {
+      // iOS's remote debugger rejects inspection of cross-origin frames. Keep
+      // normal browser security and retain a device screenshot for visual review.
+      await pause(10000);
+      check(
+        "Embedded calendar frame is visible",
+        await execute(
+          'const e=document.querySelector("#booking-frame"),r=e.getBoundingClientRect();return e.src.startsWith("https://schedule.projecthamburg.com/")&&r.width>200&&r.bottom>0&&r.top<innerHeight;'
+        )
+      );
+      entry.manualReviewRequired = [
+        "Review the iPhone calendar screenshot: cross-origin frame contents cannot be inspected by its remote debugger.",
+      ];
+      await capture("calendar");
+    } else {
+      const frameElement = (
+        await request(`/session/${id}/element`, {
+          using: "css selector",
+          value: "#booking-frame",
+        })
+      ).value;
+      await request(`/session/${id}/frame`, { id: frameElement });
+      await until("return document.body.innerText.length>80;");
+      check(
+        "Embedded calendar renders",
+        await execute(
+          'return document.body.innerText.includes("SAP Service Inc.");'
+        )
+      );
+      await capture("calendar");
+      await request(`/session/${id}/frame`, { id: null });
+    }
     const passed = results.every((x) => x.passed);
     await execute(
       "browserstack_executor: " +
@@ -309,6 +333,14 @@ for (const device of matrix) {
   } catch (error) {
     entry.error = clean(error.message);
     check("Device audit completed", false, entry.error);
+    if (id)
+      try {
+        const image = (await request(`/session/${id}/screenshot`)).value;
+        await writeFile(
+          resolve(output, device.name + "-failure.png"),
+          Buffer.from(image, "base64")
+        );
+      } catch {}
   } finally {
     if (id)
       try {
