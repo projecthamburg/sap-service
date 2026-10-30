@@ -6,7 +6,7 @@ Website: https://projecthamburg.github.io/sap-service/. Repository: https://gith
 
 GitHub Pages serves only `dist/`, built from `index.html`, `src/` and `public/`. Hash routes work at the repository subpath. Every browser module, stylesheet and configuration receives a release version; the active public configuration is also embedded safely in the built HTML to avoid an email-fallback flash during startup.
 
-`pages.yml` tests and deploys pushes to `main`. `service.yml` is a manual private-service deployment followed by a Pages publication. Private-service dependencies are installed from `api/package-lock.json`.
+`pages.yml` tests and deploys pushes to `main`. `service.yml` is a manual private-service deployment followed by a Pages publication. Both run the native Chrome image and interaction audit before publishing; reports and screenshots are retained in the `browser-audit` artifact. Root development dependencies come from `package-lock.json`; private-service dependencies come from `api/package-lock.json`.
 
 ## Private infrastructure
 

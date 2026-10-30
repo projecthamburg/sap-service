@@ -501,9 +501,7 @@ function mountComparison() {
     );
     view.style.setProperty(
       "--comparison-image",
-      `url("./images/${
-        comparisonImages[selected?.dataset.comparison || "condo"]
-      }")`
+      comparisonImageURL(selected?.dataset.comparison || "condo")
     );
   };
   if ("IntersectionObserver" in window) {
@@ -518,6 +516,13 @@ function mountComparison() {
     );
     comparisonObserver.observe(view);
   } else load();
+}
+function comparisonImageURL(key) {
+  // CSS custom-property URLs resolve against the stylesheet, which lives in src/.
+  // Resolve from the document first so this also works at the Pages repo subpath.
+  return `url("${
+    new URL(`./images/${comparisonImages[key]}`, document.baseURI).href
+  }")`;
 }
 function mountBooking(t) {
   const iframe = document.getElementById("booking-frame");
@@ -614,7 +619,7 @@ app.addEventListener("click", (event) => {
       .querySelector(".comparison-view")
       .style.setProperty(
         "--comparison-image",
-        `url("./images/${comparisonImages[target.dataset.comparison]}")`
+        comparisonImageURL(target.dataset.comparison)
       );
   }
   if (target.dataset.category) {

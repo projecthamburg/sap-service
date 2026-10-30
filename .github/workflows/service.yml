@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: "22"
       - run: npm --prefix api ci
+      - run: npm ci --ignore-scripts
       - run: npm test
       - name: Obtain temporary credentials for this service only
         uses: aws-actions/configure-aws-credentials@v4
@@ -39,6 +40,20 @@ jobs:
           git push
       - name: Build the website with the verified endpoint
         run: npm run build && npm run check
+      - name: Audit rendered images and interactions in Chrome
+        run: |
+          node scripts/serve.mjs --dist > "$RUNNER_TEMP/sap-preview.log" 2>&1 &
+          npm run test:audit
+        env:
+          SAP_CHROME_PATH: /usr/bin/google-chrome
+      - name: Retain browser audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-audit
+          path: .local/browser-audit/
+          include-hidden-files: true
+          retention-days: 7
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

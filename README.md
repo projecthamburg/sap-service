@@ -6,13 +6,15 @@ A bilingual construction-cleaning website for Montréal, Québec and Ontario, wi
 
 ## Develop and verify
 
-The frontend uses standard browser modules and needs no dependency installation. Node.js 22 or later is required for the development tools. Install the separate private-service dependencies to run its tests or deploy it.
+The frontend uses standard browser modules and needs no dependency installation to serve or build. Node.js 22.12 or later is required for the development tools. Install the root development dependencies for the automated Chrome audit, and the separate private-service dependencies for its tests or deployment.
 
 ```sh
 npm --prefix api ci
+npm ci               # Chrome audit tools; does not download another browser
 npm run dev           # http://127.0.0.1:4173
 npm test              # estimation, validation and private-service contracts
 npm run test:browser  # with dev server running: real controls in Google Chrome
+npm run test:audit    # with dev server running: decoded images, routes and controls
 npm run build         # only index.html, src/ and public/ -> dist/
 npm run check         # syntax, asset references and public credential scan
 ```
@@ -37,7 +39,7 @@ No contact details or file bytes are saved in localStorage. Attachments transmit
 
 ## Deployment
 
-Pushes to `main` run `.github/workflows/pages.yml`: API dependency installation, tests, public build, credential checks and GitHub Pages deployment.
+Pushes to `main` run `.github/workflows/pages.yml`: dependency installation, tests, public build, credential checks, a native Chrome audit and GitHub Pages deployment. The audit verifies decoded CSS comparison images as well as ordinary photographs, both languages, mobile/desktop layouts, slider controls, themes and public routes. Reports and screenshots are retained as the `browser-audit` Actions artifact.
 
 The manual **Deploy private form service** workflow uses GitHub OIDC to assume a dedicated, limited AWS deployment role. Broad AWS access keys are not stored in GitHub. It deploys the service, checks its health, then publishes the website with the verified endpoint.
 
