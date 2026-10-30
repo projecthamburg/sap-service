@@ -58,6 +58,8 @@ The supplied Project Hamburg calendar is embedded inline, with an external fallb
 
 ## Maintenance
 
+The optional `npm run test:devices` uses the existing BrowserStack account for sequential real-device and cross-browser checks. Credentials come from `BROWSERSTACK_USERNAME` / `BROWSERSTACK_ACCESS_KEY` or ignored `.local/browserstack-secrets.json`. They are sent only to BrowserStack's authenticated API, never to the public website. Reports, screenshots and session references remain under `.local/device-audit/`. The device audit does not submit forms or make appointments and is separate from the automatic Chrome deployment gate.
+
 For a new checkout, run `npm --prefix api ci`. The frontend itself requires no framework installation. `npm test`, `npm run build` and `npm run check` cover the maintained source and public output. For a full local browser pass, keep `npm run dev` running and launch `npm run test:browser`. Use Google Chrome for native screenshot and deployed-form checks.
 
 Update only the dedicated resources. Preserve the runtime role's limited permissions, bucket public-access blocks, signed-upload constraints, expiry settings and exclusion of all private material from Git and public artifacts.

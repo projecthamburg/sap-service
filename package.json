@@ -12,6 +12,7 @@
     "test": "node --test tests/*.test.mjs",
     "test:browser": "node scripts/browser-qa.mjs",
     "test:audit": "node scripts/browser-audit.mjs",
+    "test:devices": "node scripts/device-audit.mjs",
     "check": "node scripts/check.mjs",
     "deploy": "node scripts/deploy.mjs",
     "deploy:api": "node api/provision-aws.mjs"
