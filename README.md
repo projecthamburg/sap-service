@@ -9,6 +9,7 @@ Requires Node.js 22 or later. No dependency installation is needed.
 ```sh
 npm run dev       # http://127.0.0.1:4173
 npm test         # calculations, conversions, uploads, privacy and service checks
+npm run test:browser # with dev server running: real-control tests in Chrome
 npm run build    # explicit public-file allowlist -> dist/
 npm run check    # syntax and public-artifact credential checks
 ```
@@ -45,9 +46,9 @@ src/                     UI, Canadian EN/FR content, estimation and form modules
 public/                  Public imagery, brand icon, sample plan and endpoint config
 api/                     Private Worker service and database schema
 scripts/                 Preview, build, checks and deployment helpers
- tests/                  Node test suite
+tests/                  Node test suite
 .github/workflows/       Pages and private-service workflows
- docs/                   Asset provenance and operations
+docs/                   Asset provenance and operations
 appednix/                Original local materials and Claude export (ignored)
 ```
 

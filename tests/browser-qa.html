@@ -1,0 +1,70 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>SAP QA — starting</title><style>body{margin:0;background:#dfe3e9;font:14px Arial}#report{padding:20px;white-space:pre-wrap;background:#fff;max-width:1440px}iframe{display:block;width:1440px;height:1000px;border:0;background:white}.capture{display:block;max-width:1440px;width:auto;margin:20px 0}</style></head><body><pre id="report">Running SAP browser checks…</pre><iframe id="site" src="./index.html#/en/"></iframe><div id="captures"></div><script>
+(async()=>{
+const frame=document.getElementById('site'),report=document.getElementById('report'),results=[],captures=[];
+const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const until=async(fn,timeout=12000)=>{const start=Date.now();while(!fn()){if(Date.now()-start>timeout)throw new Error('Timed out');await delay(70);}};
+const record=(name,passed,detail='')=>{results.push({name,passed,detail});report.textContent=JSON.stringify({results,captures},null,2);document.title='SAP QA — '+results.filter(r=>r.passed).length+' passed, '+results.filter(r=>!r.passed).length+' failed';};
+let doc,win,oldStorage={};
+try {
+await until(()=>frame.contentDocument?.querySelector('.hero h1'));
+doc=frame.contentDocument;win=frame.contentWindow;
+for(const key of ['sap:language','sap:theme','sap:estimate'])oldStorage[key]=win.localStorage.getItem(key);
+const $=selector=>doc.querySelector(selector),all=selector=>[...doc.querySelectorAll(selector)];
+const click=selector=>{const target=$(selector);if(!target)throw new Error('Missing '+selector);target.click();};
+const set=(selector,value)=>{const el=$(selector);el.value=value;el.dispatchEvent(new win.Event('input',{bubbles:true}));el.dispatchEvent(new win.Event('change',{bubbles:true}));};
+const step=async(n)=>{await until(()=>$('.step-marker')?.textContent.includes(String(n).padStart(2,'0')));};
+record('English homepage renders',doc.documentElement.lang==='en-CA'&&$('.hero h1').textContent.includes('Built by you'));
+record('Estimator is embedded on homepage',!!$('#estimate .estimate-card')&&!$('.hero [href*="/estimate"]'));
+record('Scheduling is embedded in its own section',!!$('#consultation iframe#booking-frame'));
+click('[data-phase="1"]');record('Cleaning phase panel changes',$('[role="tab"][aria-selected="true"]').dataset.phase==='1'&&$('#stage-panel h3').textContent.includes('Final'));
+$('[data-phase="1"]').dispatchEvent(new win.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));record('Phase tabs support keyboard arrows',$('[data-phase="2"]').getAttribute('aria-selected')==='true');
+click('[data-filter="public"]');record('Sector filter hides other project cards',all('[data-sector]').filter(el=>!el.hidden).length===1);click('[data-filter="all"]');
+click('[data-est="sample"]');record('Sample loads ten editable rooms',!!$('.choice-card[data-mode="room"].selected'));
+click('#estimate-form button[type="submit"]');await step(2);
+click('#estimate-form button[type="submit"]');await step(3);
+record('Sample area totals 1,500 sq ft',$('#room-total').textContent.includes('1,500')&&all('.room-card').length===10);
+click('[data-unit="m2"]');record('Metric display converts sample correctly',$('#room-total').textContent.includes('139.35'));
+click('[data-est="add-room"]');record('A room can be added',all('.room-card').length===11);
+all('[data-remove-room]').at(-1).click();record('A room can be removed',all('.room-card').length===10);
+click('#estimate-form button[type="submit"]');await step(4);
+set('[name="condition.dust"]','heavy');set('[name="visits"]','2');
+click('#estimate-form button[type="submit"]');await step(5);
+const invalid=new win.DataTransfer();invalid.items.add(new win.File(['bad'],'malware.exe',{type:'application/octet-stream'}));$('[name="projectFiles"]').files=invalid.files;$('[name="projectFiles"]').dispatchEvent(new win.Event('change',{bubbles:true}));
+record('Unsupported project upload is rejected',all('.file-item').length===0);
+const files=new win.DataTransfer();files.items.add(new win.File(['%PDF-1.7\nTest drawing'],'sample.pdf',{type:'application/pdf'}));$('[name="projectFiles"]').files=files.files;$('[name="projectFiles"]').dispatchEvent(new win.Event('change',{bubbles:true}));record('Accepted plan stays in the file list',all('.file-item').length===1);
+click('#estimate-form button[type="submit"]');await step(6);
+record('A transparent range is calculated',!!$('.result-range strong')&&$('.result-range strong').textContent.includes('$'));
+record('Planning rates are disclosed',$('.model-disclaimer').textContent.includes('not SAP'));
+click('[data-est="save"]');const saved=JSON.parse(win.localStorage.getItem('sap:estimate'));record('Saved scopes omit attachment bytes and contact details',saved.version===1&&!saved.scope.files&&!saved.scope.email);
+click('[data-est="quote"]');record('Quotation dialog opens and traps focus with native modal',$('#request-dialog').open&&!!$('#quote-form [name="consent"]'));$('#request-dialog').close();
+for(const key of ['fitness','restaurant','healthcare','office','condo']) {click('[data-comparison="'+key+'"]');record('Realistic comparison selection: '+key,$('[data-comparison="'+key+'"]').getAttribute('aria-pressed')==='true');}
+set('.comparison-slider','25');record('Comparison slider responds to input',$('.comparison-view').style.getPropertyValue('--position')==='25%');
+for(const width of [360,390,768,1024,1440]) {frame.style.width=width+'px';await delay(200);record('No horizontal page overflow at '+width+' px',doc.documentElement.scrollWidth<=win.innerWidth+2,'scroll='+doc.documentElement.scrollWidth+', viewport='+win.innerWidth);}
+frame.style.width='390px';await delay(180);click('[data-action="menu"]');record('Mobile menu opens',$('#main-nav').classList.contains('is-open'));click('[data-action="menu"]');
+const before=doc.documentElement.dataset.theme;click('[data-action="theme"]');record('Theme toggle changes colour scheme',doc.documentElement.dataset.theme!==before);click('[data-action="theme"]');
+win.location.hash='#/en/careers';await until(()=>$('#career-form'));
+record('Careers page renders availability and résumé upload',all('[name="availability"]').length===28&&!!$('[name="resume"]'));
+click('[name="availability"]');record('Weekly availability can be selected',$('[name="availability"]').checked);
+const resume=new win.DataTransfer();resume.items.add(new win.File(['%PDF-1.7\nTest CV'],'test-cv.pdf',{type:'application/pdf'}));$('[name="resume"]').files=resume.files;$('[name="resume"]').dispatchEvent(new win.Event('change',{bubbles:true}));record('Valid résumé is retained',$('.resume-filename').textContent==='test-cv.pdf');
+click('[data-action="language"]');await until(()=>doc.documentElement.lang==='fr-CA');record('Careers fully switches to French',$('.application-card h2').textContent.includes('Parlez'));record('Language switch preserves application availability and résumé',$('[name="availability"]').checked&&$('.resume-filename').textContent==='test-cv.pdf');
+win.location.hash='#services';await until(()=>$('.hero h1'));record('French homepage renders',$('.hero h1').textContent.includes('Votre chantier'));
+for(const width of [360,390,768,1024,1440]) {frame.style.width=width+'px';await delay(180);record('French page fits '+width+' px',doc.documentElement.scrollWidth<=win.innerWidth+2,'scroll='+doc.documentElement.scrollWidth+', viewport='+win.innerWidth);}
+win.location.hash='#/fr/privacy';await until(()=>$('.legal-page'));record('Privacy page has French content',$('.legal-page h1').textContent.includes('confidentialité'));
+win.location.hash='#/en/';await until(()=>$('.hero h1'));frame.style.width='1440px';await delay(300);
+try {
+await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';script.onload=resolve;script.onerror=reject;document.head.append(script);setTimeout(()=>reject(new Error('Capture library unavailable')),12000);});
+const capture=async(name,width,element,height=1000)=>{
+document.title='SAP QA CAPTURE — '+name;frame.style.width=width+'px';await delay(250);win.scrollTo(0,0);for(const img of element.querySelectorAll('img'))img.loading='eager';await Promise.race([Promise.all([...element.querySelectorAll('img')].map(img=>img.complete?null:new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;}))),delay(2500)]);
+const box=element.getBoundingClientRect();const canvas=await html2canvas(element,{windowWidth:width,width:Math.min(width,box.width),height:Math.min(height,box.height),scale:1,useCORS:true,logging:false,scrollX:0,scrollY:0,imageTimeout:4000,ignoreElements:el=>el.tagName==='IFRAME'});
+const image=document.createElement('img');image.className='capture';image.alt=name;image.src=canvas.toDataURL('image/png');document.getElementById('captures').append(image);captures.push(name);
+};
+if(doc.documentElement.dataset.theme==='dark')click('[data-action="theme"]');await capture('desktop-en-light',1440,doc.body);
+await capture('mobile-en-light',390,doc.body);
+click('[data-action="theme"]');await capture('mobile-en-dark',390,doc.body);click('[data-action="theme"]');
+click('[data-action="language"]');await delay(200);await capture('desktop-fr-light',1440,doc.body);
+record('Rendered DOM captures produced',captures.length===4,'DOM rasterizations using computed browser layout');
+} catch(error){record('Rendered DOM captures available',false,error.message);}
+} catch(error){record('Browser run completed',false,error.stack||error.message);}
+finally {for(const [key,value] of Object.entries(oldStorage)){if(value===null)win.localStorage.removeItem(key);else win.localStorage.setItem(key,value);}report.textContent=JSON.stringify({results,captures},null,2);document.title='SAP QA DONE — '+results.filter(r=>r.passed).length+' passed, '+results.filter(r=>!r.passed).length+' failed';}
+})();
+</script></body></html>

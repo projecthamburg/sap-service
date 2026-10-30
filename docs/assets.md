@@ -2,18 +2,32 @@
 
 The six architectural photographs came from the user’s `appednix/planning-assets/`. They are representative service imagery, not completed SAP contract photography. Retain appropriate permissions from the original providers for commercial reuse.
 
-| Public file | Supplied prefix | Origin identified in supplied planning |
-| --- | --- | --- |
-| `images/lobby.jpg` | `BzxWeZo` | User-provided architectural reference |
-| `images/fitness.jpg` | `g1-Q954` | User-provided architectural reference |
-| `images/construction.jpg` | `xmEDTIH` | Polished and Pristine reference |
-| `images/residential.jpg` | `yAYcdRx` | Serenity Towers gallery reference |
-| `images/fitout.jpg` | `4D9hXm5` | User-provided architectural reference |
-| `images/glazing.jpg` | `2172hpE` | Asset Cleaning builders-cleaning reference |
+| Public file               | Supplied prefix | Origin identified in supplied planning     |
+| ------------------------- | --------------- | ------------------------------------------ |
+| `images/lobby.jpg`        | `BzxWeZo`       | User-provided architectural reference      |
+| `images/fitness.jpg`      | `g1-Q954`       | User-provided architectural reference      |
+| `images/construction.jpg` | `xmEDTIH`       | Polished and Pristine reference            |
+| `images/residential.jpg`  | `yAYcdRx`       | Serenity Towers gallery reference          |
+| `images/fitout.jpg`       | `4D9hXm5`       | User-provided architectural reference      |
+| `images/glazing.jpg`      | `2172hpE`       | Asset Cleaning builders-cleaning reference |
 
 The SVG monogram in `src/icons.js` follows the supplied SAP brand, including its sloping central A. The fictional bilingual sample drawing is original vector artwork: ten non-overlapping rectangles totaling 1,500 square feet inside a 50-by-30-foot outline, matching `src/model.js`. It is not a construction document.
 
 `public/images/cleaning-comparison.png` was made with the built-in image generation tool and is labelled illustrative. CSS presents its two halves as an interactive cleaning comparison. Visitor uploads are not presented as transformed results.
+
+The same built-in tool generated `public/images/cleaning-fitness.png`, `public/images/cleaning-restaurant.png`, `public/images/cleaning-healthcare.png` and `public/images/cleaning-office.png`. The website offers all five as selectable examples. Each is a paired illustration of cleaning conditions in the same architecture.
+
+Additional final prompts:
+
+- **fitness:** Use case: photorealistic-natural. Website cleaning comparison asset. Produce one widescreen diptych, exactly two equal-sized landscape panels side by side, zero gap and zero border. Show the EXACT SAME commercial fitness studio, pale grey rubber floor, black exposed ceiling and white walls, tall windows on right, fixed black metal equipment, mirrors on left, natural daylight in BOTH halves from the EXACT same camera, position, lens, architecture, fixtures, lighting, perspective and finish materials. Left panel: after construction, realistic dust on floor and surfaces, small bits of cardboard packaging and loose protective plastic, smudges on glass. Right panel: only the dust, smudges, packaging and loose protective film have been cleaned away. Nothing else may change. Do not add furniture, plants or decor; do not replace flooring, remove architectural elements, repaint or renovate. This must look like a premium editorial architectural photograph of a real Canadian commercial space, with natural material texture and believable light, not a render or a cartoon. Each half landscape 3:2; total aspect ratio approximately 3:1, high resolution. No people, no text, no captions, no labels, no logos, no watermark. Match every perspective line between left and right. Illustrative post-construction cleaning, not a renovation before/after.
+
+- **restaurant:** Use case: photorealistic-natural. Website cleaning comparison asset. Produce one widescreen diptych, exactly two equal-sized landscape panels side by side, zero gap and zero border. Show the EXACT SAME newly fitted restaurant, terrazzo floor, warm oak bar at left, fixed banquette seating at right, brass pendant lights, windows at far end, natural daylight in BOTH halves from the EXACT same camera, position, lens, architecture, fixtures, lighting, perspective and finish materials. Left panel: after construction, realistic dust on floor and surfaces, small bits of cardboard packaging and loose protective plastic, smudges on glass. Right panel: only the dust, smudges, packaging and loose protective film have been cleaned away. Nothing else may change. Do not add furniture, plants or decor; do not replace flooring, remove architectural elements, repaint or renovate. This must look like a premium editorial architectural photograph of a real Canadian commercial space, with natural material texture and believable light, not a render or a cartoon. Each half landscape 3:2; total aspect ratio approximately 3:1, high resolution. No people, no text, no captions, no labels, no logos, no watermark. Match every perspective line between left and right. Illustrative post-construction cleaning, not a renovation before/after.
+
+- **healthcare:** Use case: photorealistic-natural. Website cleaning comparison asset. Produce one widescreen diptych, exactly two equal-sized landscape panels side by side, zero gap and zero border. Show the EXACT SAME newly completed hospital corridor, pale resilient floor, muted blue door frames, recessed lighting and handrails, long glazed wall, no patients or medical equipment in BOTH halves from the EXACT same camera, position, lens, architecture, fixtures, lighting, perspective and finish materials. Left panel: after construction, realistic dust on floor and surfaces, small bits of cardboard packaging and loose protective plastic, smudges on glass. Right panel: only the dust, smudges, packaging and loose protective film have been cleaned away. Nothing else may change. Do not add furniture, plants or decor; do not replace flooring, remove architectural elements, repaint or renovate. This must look like a premium editorial architectural photograph of a real Canadian commercial space, with natural material texture and believable light, not a render or a cartoon. Each half landscape 3:2; total aspect ratio approximately 3:1, high resolution. No people, no text, no captions, no labels, no logos, no watermark. Match every perspective line between left and right. Illustrative post-construction cleaning, not a renovation before/after.
+
+- **office:** Use case: photorealistic-natural. Website cleaning comparison asset. Produce one widescreen diptych, exactly two equal-sized landscape panels side by side, zero gap and zero border. Show the EXACT SAME newly fitted open-plan office, light concrete floor, floor-to-ceiling glazing at right, glass meeting room partitions at left, white acoustic ceiling, built-in cabinetry, natural daylight in BOTH halves from the EXACT same camera, position, lens, architecture, fixtures, lighting, perspective and finish materials. Left panel: after construction, realistic dust on floor and surfaces, small bits of cardboard packaging and loose protective plastic, smudges on glass. Right panel: only the dust, smudges, packaging and loose protective film have been cleaned away. Nothing else may change. Do not add furniture, plants or decor; do not replace flooring, remove architectural elements, repaint or renovate. This must look like a premium editorial architectural photograph of a real Canadian commercial space, with natural material texture and believable light, not a render or a cartoon. Each half landscape 3:2; total aspect ratio approximately 3:1, high resolution. No people, no text, no captions, no labels, no logos, no watermark. Match every perspective line between left and right. Illustrative post-construction cleaning, not a renovation before/after.
+
+Generated PNGs are preserved in the public assets and locally in `appednix/generated-assets/`.
 
 Final generation prompt:
 

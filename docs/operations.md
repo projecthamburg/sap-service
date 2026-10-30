@@ -12,14 +12,14 @@ Worker: `sap-service-api`. D1: `sap-service-requests`. Private R2 bucket: `sap-s
 
 Secrets for the manual **Deploy private form service** workflow:
 
-| Name | Purpose |
-| --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Dedicated Worker, D1 and R2 provisioning |
-| `CLOUDFLARE_ACCOUNT_ID` | Target account |
-| `SAP_ADMIN_TOKEN` | Random value of at least 32 characters for private retrieval |
-| `SAP_RATE_SALT` | Separate random value for hashed rate-limit identifiers |
-| `RESEND_API_KEY` | Optional notifications |
-| `TURNSTILE_SECRET_KEY` | Optional bot verification |
+| Name                    | Purpose                                                      |
+| ----------------------- | ------------------------------------------------------------ |
+| `CLOUDFLARE_API_TOKEN`  | Dedicated Worker, D1 and R2 provisioning                     |
+| `CLOUDFLARE_ACCOUNT_ID` | Target account                                               |
+| `SAP_ADMIN_TOKEN`       | Random value of at least 32 characters for private retrieval |
+| `SAP_RATE_SALT`         | Separate random value for hashed rate-limit identifiers      |
+| `RESEND_API_KEY`        | Optional notifications                                       |
+| `TURNSTILE_SECRET_KEY`  | Optional bot verification                                    |
 
 Variables: `SAP_NOTIFICATION_FROM` must use a verified Resend sender domain. Notifications stay disabled unless sender, recipient and provider are configured. `TURNSTILE_SITE_KEY` is the public key associated with the verification secret, when enabled.
 

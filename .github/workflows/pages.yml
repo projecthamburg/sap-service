@@ -12,11 +12,14 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
       - name: Test estimation, uploads, privacy and service handlers
         run: npm test
       - name: Build only public files
