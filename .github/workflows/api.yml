@@ -1,0 +1,52 @@
+name: Deploy private form service
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
+      - name: Provision private storage and deploy service
+        run: node scripts/provision-api.mjs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SAP_ADMIN_TOKEN: ${{ secrets.SAP_ADMIN_TOKEN }}
+          SAP_RATE_SALT: ${{ secrets.SAP_RATE_SALT }}
+          SAP_ALLOWED_ORIGINS: https://${{ github.repository_owner }}.github.io
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SAP_NOTIFICATION_FROM: ${{ vars.SAP_NOTIFICATION_FROM }}
+          SAP_NOTIFICATION_TO: servicesapinc@gmail.com
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+      - name: Commit verified public endpoint
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/site-config.json
+          git diff --cached --quiet || git commit -m "Configure verified private form service"
+          git push
+      - name: Build website with verified service endpoint
+        run: npm run build && npm run check
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  publish:
+    needs: deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

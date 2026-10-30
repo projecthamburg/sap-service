@@ -1,0 +1,17 @@
+.DS_Store
+node_modules/
+.thumbnail
+.env
+.env.*
+!.env.example
+.dev.vars*
+.openchrome/
+appednix/
+dist/
+test-results/
+playwright-report/
+.wrangler/
+*.log
+*.pem
+*.key
+.local/
