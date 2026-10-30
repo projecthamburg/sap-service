@@ -92,9 +92,7 @@ export class Estimator {
             i < s.step ? "complete" : i === s.step ? "current" : ""
           }"><button type="button" data-step="${i}" ${
             i > s.step ? "disabled" : ""
-          } aria-label="${t.step} ${String(i + 1).padStart(2, "0")} ${label}" ${
-            i === s.step ? 'aria-current="step"' : ""
-          }><span>${
+          } ${i === s.step ? 'aria-current="step"' : ""}><span>${
             i < s.step ? icon("check") : String(i + 1).padStart(2, "0")
           }</span><small>${label}</small></button></li>`
       )
@@ -125,14 +123,12 @@ export class Estimator {
     if (focus) {
       const h = this.root.querySelector(".step-heading");
       h?.focus({ preventScroll: true });
-      this.root
-        .querySelector(".estimate-card")
-        .scrollIntoView({
-          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-            ? "instant"
-            : "smooth",
-          block: "start",
-        });
+      this.root.querySelector(".estimate-card").scrollIntoView({
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "start",
+      });
     }
   }
   heading(title, copy) {
@@ -895,9 +891,9 @@ export class Estimator {
     }</p><p><strong>${t.disclaimer}</strong></p>`;
     document.getElementById("print-estimate")?.remove();
     document.body.append(printRoot);
-    window.print();
     window.addEventListener("afterprint", () => printRoot.remove(), {
       once: true,
     });
+    window.print();
   }
 }
