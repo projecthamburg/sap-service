@@ -94,6 +94,12 @@ const matrix = [
     browserVersion: "latest",
     options: { os: "Windows", osVersion: "11" },
   },
+  {
+    name: "windows-firefox",
+    browserName: "Firefox",
+    browserVersion: "latest",
+    options: { os: "Windows", osVersion: "11" },
+  },
 ].filter((x) => !process.argv[2] || process.argv[2] === x.name);
 const report = [];
 const clean = (message) =>
