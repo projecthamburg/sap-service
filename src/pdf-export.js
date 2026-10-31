@@ -109,9 +109,7 @@ export async function createEstimatePDF(snapshot, assets) {
   }
   function ensure(height) {
     if (y - height < 62)
-      newPage(
-        fr ? "Portée et détails — suite" : "Scope and details — continued"
-      );
+      newPage(fr ? "Estimation — suite" : "Estimate — continued");
   }
   function lines(value, font, size, width) {
     const words = text(value).split(/\s+/),
@@ -162,10 +160,10 @@ export async function createEstimatePDF(snapshot, assets) {
     y -= 8;
     paragraph(value, { size: 14, font: bold, gap: 12 });
   }
-  function row(label, value, { emphasis = false } = {}) {
+  function row(label, value, { emphasis = false, padding = 14 } = {}) {
     const ll = lines(label, regular, 10, 310),
       vl = lines(value, emphasis ? bold : regular, 10, 170),
-      height = Math.max(ll.length, vl.length) * 15 + 14;
+      height = Math.max(ll.length, vl.length) * 15 + padding;
     ensure(height);
     if (emphasis)
       page.drawRectangle({
@@ -495,7 +493,8 @@ export async function createEstimatePDF(snapshot, assets) {
           ? fr
             ? "À vérifier"
             : "Unverified"
-          : `${number(claim.areaSqFt)} ${imperial}`
+          : `${number(claim.areaSqFt)} ${imperial}`,
+        { padding: 8 }
       );
     for (const d of review.decisions || [])
       if (review.comparison?.conflicts.some((c) => c.id === d.conflictId))
@@ -569,14 +568,24 @@ export async function createEstimatePDF(snapshot, assets) {
       { size: 9, color: palette.muted }
     );
   }
-  section(fr ? "Confirmer la portée" : "Confirm the scope");
-  paragraph(
-    fr
-      ? "Demandez une soumission formelle et réservez une consultation. Confirmez la superficie nette, les accès, les finis et l’échéancier avant toute mobilisation."
-      : "Request a formal quotation and book a consultation. Confirm net cleanable area, access, finishes and schedule before any mobilization.",
-    { size: 10 }
+  const nextSteps = fr
+    ? "Demandez une soumission formelle et réservez une consultation. Confirmez la superficie nette, les accès, les finis et l’échéancier avant toute mobilisation."
+    : "Request a formal quotation and book a consultation. Confirm net cleanable area, access, finishes and schedule before any mobilization.";
+  const contactEmail = config.contact?.email || "info@projecthamburg.com";
+  // Keep the final heading, guidance and contact together; avoid an email-only page.
+  ensure(
+    8 +
+      14 * 1.45 +
+      12 +
+      (lines(nextSteps, regular, 10, W - 2 * M).length +
+        lines(contactEmail, bold, 10, W - 2 * M).length) *
+        14.5 +
+      24 +
+      4
   );
-  paragraph(config.contact?.email || "info@projecthamburg.com", { font: bold });
+  section(fr ? "Confirmer la portée" : "Confirm the scope");
+  paragraph(nextSteps, { size: 10 });
+  paragraph(contactEmail, { font: bold });
   const pages = pdf.getPages();
   for (let i = 0; i < pages.length; i++) {
     const p = pages[i];

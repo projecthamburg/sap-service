@@ -1,3 +1,4 @@
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 try {
@@ -27,6 +28,25 @@ const output = resolve(
   process.env.SAP_DEVICE_AUDIT_OUTPUT || ".local/device-audit"
 );
 await mkdir(output, { recursive: true });
+const previewDocument = await PDFDocument.create();
+const previewFont = await previewDocument.embedFont(StandardFonts.Helvetica);
+const previewPage = previewDocument.addPage([792, 600]);
+previewPage.drawText("Synthetic device plan - no AI processing", {
+  x: 40,
+  y: 550,
+  size: 20,
+  font: previewFont,
+});
+previewPage.drawRectangle({
+  x: 40,
+  y: 70,
+  width: 710,
+  height: 430,
+  borderWidth: 2,
+});
+const previewPDFBase64 = Buffer.from(await previewDocument.save()).toString(
+  "base64"
+);
 const matrix = [
   {
     name: "iphone-safari",
@@ -401,7 +421,8 @@ for (const device of matrix) {
           );
           await capture(language + "-discovery");
           await execute(
-            'const canvas=Object.assign(document.createElement("canvas"),{width:1400,height:1060});const ctx=canvas.getContext("2d");ctx.fillStyle="white";ctx.fillRect(0,0,1400,1060);ctx.fillStyle="black";ctx.font="30px Arial";ctx.fillText("Synthetic plan preview — no model processing",80,100);const bytes=Uint8Array.from(atob(canvas.toDataURL("image/png").split(",")[1]),c=>c.charCodeAt(0));const files=new DataTransfer();files.items.add(new File([bytes],"device-preview.png",{type:"image/png"}));const e=document.querySelector("[name=projectFiles]");e.files=files.files;e.dispatchEvent(new Event("change",{bubbles:true}));'
+            'const bytes=Uint8Array.from(atob(arguments[0]),c=>c.charCodeAt(0));const files=new DataTransfer();files.items.add(new File([bytes],"device-preview.pdf",{type:"application/pdf"}));const e=document.querySelector("[name=projectFiles]");e.files=files.files;e.dispatchEvent(new Event("change",{bubbles:true}));',
+            [previewPDFBase64]
           );
           await click('[data-est="plan-review"]');
           await until(
