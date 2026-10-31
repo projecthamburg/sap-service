@@ -401,6 +401,43 @@ for (const device of matrix) {
           "return document.documentElement.scrollWidth<=innerWidth+2;"
         )
       );
+      const nameElement = (
+        await request(`/session/${id}/element`, {
+          using: "css selector",
+          value: '#career-form [name="name"]',
+        })
+      ).value;
+      const nameId =
+        nameElement["element-6066-11e4-a52e-4f735466cecf"] ||
+        nameElement.ELEMENT;
+      await click('#career-form [name="name"]');
+      await request(`/session/${id}/element/${nameId}/value`, {
+        text: "SAP QA Example",
+      });
+      check(
+        language + " application text field accepts browser input",
+        await execute(
+          'return document.querySelector("#career-form [name=name]").value==="SAP QA Example";'
+        )
+      );
+      if (
+        device.options.realMobile &&
+        device.browserName === "safari" &&
+        device.options.deviceName.startsWith("iPhone")
+      ) {
+        await pause(600);
+        const inputView = await execute(
+          'return {scale:visualViewport.scale,fontSize:getComputedStyle(document.querySelector("#career-form [name=name]")).fontSize};'
+        );
+        check(
+          language + " phone input stays readable without automatic zoom",
+          inputView.scale <= 1.05 && parseFloat(inputView.fontSize) >= 16,
+          JSON.stringify(inputView)
+        );
+      }
+      await capture(language + "-input-focused");
+      await request(`/session/${id}/element/${nameId}/clear`, {});
+      await execute("document.activeElement.blur();");
       await click(".availability-cell");
       check(
         language + " career shift responds to browser input",

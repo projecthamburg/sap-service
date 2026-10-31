@@ -69,6 +69,21 @@ try {
           document.documentElement.dataset.theme = theme;
         }, theme);
         await page.evaluate(() => document.fonts.ready);
+        const photographs = await page.$$eval("main img", async (images) =>
+          Promise.all(
+            images.map(async (image) => {
+              image.loading = "eager";
+              await image.decode();
+              return {
+                src: image.currentSrc,
+                width: image.naturalWidth,
+                height: image.naturalHeight,
+              };
+            })
+          )
+        );
+        if (!photographs.length || photographs.some((image) => !image.width))
+          throw Error("A public photograph failed to decode before capture.");
         const name = `${language}-${theme}-${width}`;
         await page.$eval(".comparison-view", (e) =>
           e.scrollIntoView({ behavior: "instant", block: "center" })
@@ -143,6 +158,7 @@ try {
         manifest.captures.push({
           name,
           brand,
+          photographs,
           coverage: after.coverage,
           changed: diff.changed.length,
           files: [

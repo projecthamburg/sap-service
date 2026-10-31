@@ -3891,7 +3891,7 @@ dialog::backdrop {
   .field input,
   .field select,
   .field textarea {
-    font-size: 13px !important;
+    font-size: 16px !important;
     min-height: 45px !important;
   }
   .checkbox-row {
@@ -3949,7 +3949,7 @@ dialog::backdrop {
   }
   .room-card .field input,
   .room-card .field select {
-    font-size: 12px !important;
+    font-size: 16px !important;
   }
   .room-total {
     padding: 14px 12px;

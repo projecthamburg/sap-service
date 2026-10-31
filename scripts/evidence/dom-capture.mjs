@@ -151,6 +151,13 @@ export function captureDOM({
             hit && (hit === node || node.contains(hit))
           ),
           focusVisible: node.matches(":focus-visible"),
+          hitTarget: hit
+            ? {
+                tag: hit.localName,
+                id: hit.id || null,
+                classes: [...hit.classList],
+              }
+            : null,
         },
         geometry: {
           viewport: {
@@ -176,6 +183,9 @@ export function captureDOM({
           backgroundImage: style.backgroundImage,
           fill: style.fill,
           opacity: style.opacity,
+          zIndex: style.zIndex,
+          overflowX: style.overflowX,
+          overflowY: style.overflowY,
         },
         state: {
           selected: node.getAttribute("aria-selected"),
