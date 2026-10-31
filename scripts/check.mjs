@@ -2,6 +2,7 @@ import { readdir, readFile, access } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { content } from "../src/content.js";
+import { standaloneLogo, favicon } from "../src/brand.js";
 let failed = false;
 const fail = (message) => {
   failed = true;
@@ -18,9 +19,20 @@ for (const dir of ["src", "scripts", "api"]) {
 }
 const expectedAssets = new Set([
   "brand/favicon.svg",
+  "brand/sap-service.svg",
   "images/lobby.webp",
   "images/sample-floor-plan.svg",
 ]);
+for (const [name, expected] of [
+  ["sap-service.svg", standaloneLogo()],
+  ["favicon.svg", favicon()],
+]) {
+  if (
+    (await readFile(join("public/brand", name), "utf8")).trim() !==
+    expected.trim()
+  )
+    fail(`The generated ${name} does not match the canonical brand geometry.`);
+}
 for (const language of Object.values(content)) {
   for (const phase of language.services.stages)
     expectedAssets.add(`images/${phase.image}`);

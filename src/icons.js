@@ -38,6 +38,4 @@ export const icon = (name, cls = "") =>
   `<svg class="icon ${cls}" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${
     paths[name] || paths.arrow
   }</svg>`;
-// Geometry follows the supplied SAP monogram, including the sloping central A.
-export const logo = (cls = "") =>
-  `<svg class="sap-logo ${cls}" viewBox="0 0 210 86" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="12" stroke-linejoin="round"><path d="M72 12H29c-20 0-20 29 0 29h25c23 0 23 31 0 31H12"/><path d="M82 72 116 12h29M99 45h34M116 12l32 60"/><path d="M156 72V12h22c31 0 31 34 0 34h-22"/></g></svg>`;
+export { logo } from "./brand.js";

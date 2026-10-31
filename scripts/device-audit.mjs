@@ -22,7 +22,10 @@ const headers = {
 };
 const site =
   process.env.SAP_AUDIT_URL || "https://projecthamburg.github.io/sap-service/";
-const output = resolve(".local/device-audit");
+const useLocal = process.env.BROWSERSTACK_LOCAL === "true";
+const output = resolve(
+  process.env.SAP_DEVICE_AUDIT_OUTPUT || ".local/device-audit"
+);
 await mkdir(output, { recursive: true });
 const matrix = [
   {
@@ -37,6 +40,46 @@ const matrix = [
       deviceName: "Samsung Galaxy S23",
       osVersion: "13.0",
       realMobile: true,
+    },
+  },
+  {
+    name: "ipad-safari",
+    browserName: "safari",
+    options: {
+      deviceName: "iPad Air 13 2025",
+      osVersion: "18",
+      realMobile: true,
+      deviceOrientation: "portrait",
+    },
+  },
+  {
+    name: "ipad-safari-landscape",
+    browserName: "safari",
+    options: {
+      deviceName: "iPad Air 13 2025",
+      osVersion: "18",
+      realMobile: true,
+      deviceOrientation: "landscape",
+    },
+  },
+  {
+    name: "android-tablet",
+    browserName: "chrome",
+    options: {
+      deviceName: "Samsung Galaxy Tab S9",
+      osVersion: "13.0",
+      realMobile: true,
+      deviceOrientation: "portrait",
+    },
+  },
+  {
+    name: "android-tablet-landscape",
+    browserName: "chrome",
+    options: {
+      deviceName: "Samsung Galaxy Tab S9",
+      osVersion: "13.0",
+      realMobile: true,
+      deviceOrientation: "landscape",
     },
   },
   {
@@ -81,7 +124,13 @@ async function request(path, body, method = body ? "POST" : "GET") {
 }
 for (const device of matrix) {
   const results = [],
-    entry = { device: device.name, results };
+    entry = {
+      device: device.name,
+      url: site,
+      localTunnel: useLocal,
+      startedAt: new Date().toISOString(),
+      results,
+    };
   report.push(entry);
   let id;
   const check = (name, passed, detail = "") => {
@@ -103,8 +152,21 @@ for (const device of matrix) {
             : {}),
           "bstack:options": {
             ...device.options,
+            ...(useLocal
+              ? {
+                  local: true,
+                  ...(process.env.BROWSERSTACK_LOCAL_IDENTIFIER
+                    ? {
+                        localIdentifier:
+                          process.env.BROWSERSTACK_LOCAL_IDENTIFIER,
+                      }
+                    : {}),
+                }
+              : {}),
             projectName: "SAP Service",
-            buildName: "SAP deployed image audit",
+            buildName: useLocal
+              ? "SAP local preview audit"
+              : "SAP deployed image audit",
             sessionName: "SAP " + device.name,
             debug: true,
             networkLogs: true,
@@ -148,6 +210,21 @@ for (const device of matrix) {
         Buffer.from(image, "base64")
       );
     };
+    const click = async (selector) => {
+      await execute(
+        'document.querySelector(arguments[0]).scrollIntoView({block:"center",behavior:"instant"});',
+        [selector]
+      );
+      const element = (
+        await request(`/session/${id}/element`, {
+          using: "css selector",
+          value: selector,
+        })
+      ).value;
+      const elementId =
+        element["element-6066-11e4-a52e-4f735466cecf"] || element.ELEMENT;
+      await request(`/session/${id}/element/${elementId}/click`, {});
+    };
     for (const language of ["en", "fr"]) {
       await request(`/session/${id}/url`, {
         url: site + "#/" + language + "/",
@@ -170,6 +247,35 @@ for (const device of matrix) {
         )
       );
       await capture(language + "-hero");
+      const mobileMenu = await execute(
+        'const e=document.querySelector("[data-action=menu]");return getComputedStyle(e).display!=="none";'
+      );
+      if (mobileMenu) {
+        await click('[data-action="menu"]');
+        check(
+          language + " navigation opens with browser input",
+          await execute(
+            'return document.querySelector("#main-nav").classList.contains("is-open");'
+          )
+        );
+        await capture(language + "-navigation");
+        await click('#main-nav a[href="#services"]');
+        check(
+          language + " navigation follows section and closes",
+          await execute(
+            'return !document.querySelector("#main-nav").classList.contains("is-open")&&document.querySelector("[data-action=menu]").getAttribute("aria-expanded")==="false";'
+          )
+        );
+      }
+      const photographs = await asyncExecute(
+        'const images=[...document.querySelectorAll("main img")];return Promise.all(images.map(async image=>{image.loading="eager";try{await image.decode();return image.naturalWidth>0;}catch{return false;}}));'
+      );
+      check(
+        language + " all homepage photographs decode",
+        Array.isArray(photographs) &&
+          photographs.length > 5 &&
+          photographs.every(Boolean)
+      );
       await execute(
         'document.querySelector(".comparison-view").scrollIntoView({block:"center",behavior:"instant"});'
       );
@@ -231,13 +337,18 @@ for (const device of matrix) {
         await execute('return document.documentElement.dataset.theme==="dark";')
       );
       await capture(language + "-comparison-dark");
-      await execute(
-        'document.querySelector("[data-action=theme]").click();document.querySelector("[data-est=sample]").click();'
-      );
-      for (let i = 0; i < 5; i++)
-        await execute(
-          'document.querySelector("#estimate-form button[type=submit]").click();'
+      await execute('document.querySelector("[data-action=theme]").click();');
+      await click('[data-est="sample"]');
+      for (let i = 0; i < 5; i++) {
+        check(
+          language + " estimator card " + (i + 1) + " fits viewport",
+          await execute(
+            "return document.documentElement.scrollWidth<=innerWidth+2;"
+          )
         );
+        if (i === 2) await capture(language + "-room-card");
+        await click('#estimate-form button[type="submit"]');
+      }
       check(
         language + " sample estimate completes",
         await execute(
@@ -272,6 +383,20 @@ for (const device of matrix) {
           "return document.documentElement.scrollWidth<=innerWidth+2;"
         )
       );
+      await click(".availability-cell");
+      check(
+        language + " career shift responds to browser input",
+        await execute(
+          'return document.querySelector("[name=availability]").checked;'
+        )
+      );
+      await capture(language + "-availability");
+      check(
+        language + " incomplete application is invalid",
+        await execute(
+          'return !document.querySelector("#career-form").checkValidity();'
+        )
+      );
       const photo = await asyncExecute(
         'const image=document.querySelector(".careers-hero img");await image.decode();return image.naturalWidth>0;'
       );
@@ -285,7 +410,7 @@ for (const device of matrix) {
     await until(
       'return Boolean(document.querySelector("#booking-frame")?.getAttribute("src"));'
     );
-    if (device.name === "iphone-safari") {
+    if (device.options.realMobile && device.browserName === "safari") {
       // iOS's remote debugger rejects inspection of cross-origin frames. Keep
       // normal browser security and retain a device screenshot for visual review.
       await pause(10000);
@@ -296,7 +421,7 @@ for (const device of matrix) {
         )
       );
       entry.manualReviewRequired = [
-        "Review the iPhone calendar screenshot: cross-origin frame contents cannot be inspected by its remote debugger.",
+        "Review the iOS calendar screenshot: cross-origin frame contents cannot be inspected by its remote debugger.",
       ];
       await capture("calendar");
     } else {

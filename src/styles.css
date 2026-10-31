@@ -336,23 +336,12 @@ textarea:focus-visible {
 }
 .sap-logo {
   width: 86px;
-  height: 43px;
+  height: auto;
   display: block;
 }
-.brand > span {
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: 0.14em;
-  border-left: 1px solid var(--line);
-  padding: 4px 0 4px 13px;
-}
-.brand small {
-  display: block;
-  font-size: 5.8px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  margin-top: 5px;
+.site-header .brand .sap-logo {
+  width: 124px;
+  height: auto;
 }
 .main-nav {
   display: flex;
@@ -2358,13 +2347,9 @@ input[type="checkbox"] {
   color: white;
   margin-bottom: 30px;
 }
-.site-footer .brand > span {
-  border-color: #ffffff44;
-  font-size: 10px;
-}
 .site-footer .sap-logo {
-  width: 79px;
-  height: 37px;
+  width: 144px;
+  height: auto;
 }
 .footer-brand h2 {
   font-size: 30px;
@@ -2906,9 +2891,6 @@ dialog::backdrop {
   .main-nav > a {
     font-size: 11px;
   }
-  .brand > span {
-    display: none;
-  }
   .nav-actions {
     gap: 6px;
   }
@@ -3051,15 +3033,9 @@ dialog::backdrop {
   .nav-inner {
     height: 76px;
   }
-  .brand > span {
-    display: block;
-    font-size: 9px;
-  }
-  .brand small {
-    font-size: 6px;
-  }
-  .brand .sap-logo {
-    width: 75px;
+  .site-header .brand .sap-logo {
+    width: 110px;
+    height: auto;
   }
   .main-nav > a {
     font-size: 11px;
@@ -3478,17 +3454,9 @@ dialog::backdrop {
     height: 72px;
     gap: 14px;
   }
-  .brand .sap-logo {
-    width: 74px;
-    height: 37px;
-  }
-  .brand > span {
-    font-size: 9px;
-    padding-left: 10px;
-  }
-  .brand small {
-    font-size: 4.5px;
-    margin-top: 4px;
+  .site-header .brand .sap-logo {
+    width: 110px;
+    height: auto;
   }
   .main-nav {
     display: none;
@@ -4247,7 +4215,7 @@ dialog::backdrop {
     margin-bottom: 28px;
   }
   .site-footer .sap-logo {
-    width: 75px;
+    width: 124px;
   }
   .footer-brand h2 {
     font-size: 29px;
@@ -4469,18 +4437,12 @@ dialog::backdrop {
     font-size: 10px;
     gap: 7px;
   }
-  .brand > span {
-    font-size: 8px;
-    padding-left: 9px;
-  }
-  .brand .sap-logo {
-    width: 65px;
+  .site-header .brand .sap-logo {
+    width: 104px;
+    height: auto;
   }
   .brand {
     gap: 9px;
-  }
-  .brand small {
-    font-size: 5px;
   }
   .nav-actions {
     gap: 3px;
@@ -4640,7 +4602,7 @@ dialog::backdrop {
   }
   #print-estimate .sap-logo {
     width: 90px;
-    height: 45px;
+    height: auto;
     margin-bottom: 12px;
   }
   #print-estimate h1 {

@@ -1,0 +1,12 @@
+{
+  "source": "sap-logo-source.jpg",
+  "sha256": "979228fe31ff93dd4f0599b3b102beb8a16ca0bb45b44e560594a7cbb2e5e9ec",
+  "viewBox": [
+    42,
+    78,
+    172,
+    100
+  ],
+  "maskThreshold": 145,
+  "minimumIntersectionOverUnion": 0.975
+}

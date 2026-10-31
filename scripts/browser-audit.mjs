@@ -2,6 +2,8 @@ import puppeteer from "puppeteer-core";
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { compareBrandReference } from "./evidence/brand-reference.mjs";
+import { captureDOM } from "./evidence/dom-capture.mjs";
 
 // Exercise rendered public assets in Chrome, including CSS backgrounds. This does
 // not submit forms, send notifications or create calendar appointments.
@@ -104,6 +106,20 @@ try {
     check(
       `${language}: brand font loaded`,
       await page.evaluate(() => document.fonts.check("500 24px Figtree"))
+    );
+    const brand = await compareBrandReference(page);
+    check(
+      `${language}: logo matches the supplied artwork`,
+      brand.passed,
+      `silhouette IoU ${brand.intersectionOverUnion.toFixed(4)}`
+    );
+    await writeFile(
+      resolve(output, `brand-${language}.json`),
+      JSON.stringify(brand, null, 2)
+    );
+    await writeFile(
+      resolve(output, `domscan-${language}.json`),
+      JSON.stringify(await page.evaluate(captureDOM, {}), null, 2)
     );
     for (const width of [360, 390, 768, 1024, 1440]) {
       await page.setViewport({ width, height: 1000 });

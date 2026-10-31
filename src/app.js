@@ -88,11 +88,10 @@ function header(t) {
     <header class="site-header"><div class="container nav-inner">
       <a href="#" class="brand" aria-label="SAP Service Inc. ${
         language === "fr" ? "Nettoyage de chantier" : "Construction cleaning"
-      } · ${
-    language === "fr" ? "Accueil" : "Home"
-  }">${logo()}<span>SERVICE INC.<small>${
-    language === "fr" ? "NETTOYAGE DE CHANTIER" : "CONSTRUCTION CLEANING"
-  }</small></span></a>
+      } · ${language === "fr" ? "Accueil" : "Home"}">${logo(
+    "brand-lockup",
+    "lockup"
+  )}</a>
       <nav id="main-nav" class="main-nav" aria-label="${
         language === "fr" ? "Navigation principale" : "Main navigation"
       }">${t.nav
@@ -120,9 +119,10 @@ function header(t) {
     </div></header>`;
 }
 function footer(t) {
-  return `<footer class="site-footer"><div class="container"><div class="footer-upper"><div class="footer-brand"><a href="#" class="brand" aria-label="SAP Service Inc.">${logo()}<span>SERVICE INC.</span></a><h2>${
-    t.footer.line
-  }</h2><p>${
+  return `<footer class="site-footer"><div class="container"><div class="footer-upper"><div class="footer-brand"><a href="#" class="brand" aria-label="SAP Service Inc.">${logo(
+    "brand-lockup",
+    "lockup"
+  )}</a><h2>${t.footer.line}</h2><p>${
     t.footer.copy
   }</p></div><div class="footer-links"><p class="eyebrow">${
     t.footer.explore

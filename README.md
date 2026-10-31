@@ -16,6 +16,9 @@ npm test              # estimation, validation and private-service contracts
 npm run test:browser  # with dev server running: real controls in Google Chrome
 npm run test:audit    # with dev server running: decoded images, routes and controls
 npm run test:devices  # optional BrowserStack credentials; audits the deployed site
+npm run domscan       # eight scoped browser states, paired captures and artwork checks
+npm run blueprint -- /path/to/blueprint-engine # optional external static analysis
+npm run evidence:map  # join fresh static and runtime evidence
 npm run build         # only index.html, src/ and public/ -> dist/
 npm run check         # syntax, asset references and public credential scan
 ```
@@ -40,11 +43,11 @@ No contact details or file bytes are saved in localStorage. Attachments transmit
 
 ## Deployment
 
-Pushes to `main` run `.github/workflows/pages.yml`: dependency installation, tests, public build, credential checks, a native Chrome audit and GitHub Pages deployment. The audit verifies decoded CSS comparison images as well as ordinary photographs, both languages, mobile/desktop layouts, slider controls, themes and public routes. Reports and screenshots are retained as the `browser-audit` Actions artifact.
+Pushes to `main` run `.github/workflows/pages.yml`: dependency installation, tests, public build, credential checks, a native Chrome audit, eight-state Domscan capture and GitHub Pages deployment. The audit verifies decoded CSS comparison images as well as ordinary photographs, both languages, mobile/desktop layouts, slider controls, themes and public routes. Reports and screenshots are retained as the `browser-audit` Actions artifact.
 
 The manual **Deploy private form service** workflow uses GitHub OIDC to assume a dedicated, limited AWS deployment role. Broad AWS access keys are not stored in GitHub. It deploys the service, checks its health, then publishes the website with the verified endpoint.
 
-The optional BrowserStack audit runs iPhone Safari, Android Chrome, macOS Safari and Windows Edge sequentially. It reads `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` (or the ignored local credential file), saves device screenshots and reports under `.local/device-audit/`, and closes each remote session. It exercises public sample data without sending quotation requests, applications or appointments.
+The optional BrowserStack audit runs iPhone Safari, Android Chrome, iPad Safari and Galaxy Tab Chrome in both tablet orientations, macOS Safari and Windows Edge sequentially. It reads `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` (or the ignored local credential file), saves device screenshots and reports under `.local/device-audit/`, and closes each remote session. Set `BROWSERSTACK_LOCAL=true`, `BROWSERSTACK_LOCAL_IDENTIFIER` and `SAP_AUDIT_URL` to use an already connected Local tunnel. It exercises public sample data without sending quotation requests, applications or appointments. See [the evidence workflow](docs/evidence-workflow.md) for the source/runtime/reference analysis.
 
 `npm run deploy` can provision the service using local authorized AWS credentials, push source, configure Pages, wait for Actions and verify the live URL. It reads the ignored `.env` when needed. See [operations](docs/operations.md).
 

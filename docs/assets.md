@@ -11,7 +11,7 @@ The six architectural photographs came from the user’s `appednix/planning-asse
 | `images/fitout.webp`       | `4D9hXm5`       | User-provided architectural reference      |
 | `images/glazing.webp`      | `2172hpE`       | Asset Cleaning builders-cleaning reference |
 
-The SVG monogram in `src/icons.js` follows the supplied SAP brand, including its sloping central A. The fictional bilingual sample drawing is original vector artwork: ten non-overlapping rectangles totaling 1,500 square feet inside a 50-by-30-foot outline, matching `src/model.js`. It is not a construction document.
+The canonical geometry in `src/brand.js` was traced from the supplied navy-on-white SAP artwork (`WhatsApp Image 2026-10-30 at 12.19.58 PM (1).jpeg`). It preserves the connected S/A construction, separated P and original stacked SAP SERVICE INC. wordmark. `src/icons.js` re-exports the renderer for shared use. The downloadable SVG and favicon derive from that geometry. An unmodified source fixture and recorded SHA-256 support independent browser silhouette checks; see [the evidence workflow](evidence-workflow.md). The fictional bilingual sample drawing is original vector artwork: ten non-overlapping rectangles totaling 1,500 square feet inside a 50-by-30-foot outline, matching `src/model.js`. It is not a construction document.
 
 `public/images/cleaning-comparison.webp` was made with the built-in image generation tool and is labelled illustrative. CSS presents its two halves as an interactive cleaning comparison. Visitor uploads are not presented as transformed results.
 

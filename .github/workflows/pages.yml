@@ -36,6 +36,7 @@ jobs:
         run: |
           node scripts/serve.mjs --dist > "$RUNNER_TEMP/sap-preview.log" 2>&1 &
           npm run test:audit
+          npm run domscan
         env:
           SAP_CHROME_PATH: /usr/bin/google-chrome
       - name: Retain browser audit evidence
@@ -43,7 +44,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: browser-audit
-          path: .local/browser-audit/
+          path: |
+            .local/browser-audit/
+            .local/domscan/
           include-hidden-files: true
           retention-days: 7
       - name: Configure Pages
