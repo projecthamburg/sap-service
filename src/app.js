@@ -590,6 +590,8 @@ app.addEventListener("click", (event) => {
     );
     document.getElementById("main-nav").classList.toggle("is-open", open);
     target.innerHTML = icon(open ? "close" : "menu");
+    if (open)
+      document.querySelector("#main-nav a")?.focus({ preventScroll: true });
   }
   if (target.dataset.phase !== undefined)
     selectStage(Number(target.dataset.phase));
@@ -666,6 +668,9 @@ app.addEventListener("keydown", (event) => {
     selectStage(i, true);
   }
   if (event.key === "Escape") {
+    const menuWasOpen = document
+      .getElementById("main-nav")
+      ?.classList.contains("is-open");
     document.getElementById("main-nav")?.classList.remove("is-open");
     document
       .querySelector(".menu-toggle")
@@ -674,6 +679,7 @@ app.addEventListener("keydown", (event) => {
     if (menu) {
       menu.innerHTML = icon("menu");
       menu.setAttribute("aria-label", content[language].menu);
+      if (menuWasOpen) menu.focus({ preventScroll: true });
     }
   }
 });

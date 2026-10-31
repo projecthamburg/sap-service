@@ -270,6 +270,10 @@ try {
       `${language}: mobile navigation opens`,
       await page.$eval("#main-nav", (e) => e.classList.contains("is-open"))
     );
+    check(
+      `${language}: opened navigation receives keyboard focus`,
+      await page.$eval("#main-nav", (e) => e.contains(document.activeElement))
+    );
     await page.keyboard.press("Escape");
     check(
       `${language}: Escape closes mobile navigation`,
@@ -277,6 +281,43 @@ try {
         '[data-action="menu"]',
         (e) => e.getAttribute("aria-expanded") === "false"
       )
+    );
+    check(
+      `${language}: Escape returns focus to the menu control`,
+      await page.$eval(
+        '[data-action="menu"]',
+        (e) => e === document.activeElement
+      )
+    );
+    // Place a temporary, noninteractive status message over a real control.
+    // Pointer hit testing must still reach the button beneath it.
+    const toastPassesInput = await page.evaluate(() => {
+      const button = document.querySelector('[data-action="theme"]'),
+        box = button.getBoundingClientRect();
+      const message = document.createElement("div");
+      message.className = "toast";
+      message.textContent = "Audit status";
+      Object.assign(message.style, {
+        left: box.x + "px",
+        top: box.y + "px",
+        bottom: "auto",
+        transform: "none",
+        width: box.width + "px",
+        height: box.height + "px",
+        padding: "0",
+      });
+      document.body.append(message);
+      const hit = document.elementFromPoint(
+          box.x + box.width / 2,
+          box.y + box.height / 2
+        ),
+        passes = Boolean(hit && button.contains(hit));
+      message.remove();
+      return passes;
+    });
+    check(
+      `${language}: status messages do not intercept controls`,
+      toastPassesInput
     );
     for (const route of ["careers", "privacy", "terms", "inbox"]) {
       await goto("#/" + language + "/" + route);

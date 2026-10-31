@@ -2447,6 +2447,7 @@ input[type="checkbox"] {
   color: #ff91a7;
 }
 .toast {
+  pointer-events: none;
   position: fixed;
   bottom: 25px;
   left: 50%;

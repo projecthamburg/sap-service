@@ -230,8 +230,26 @@ for (const device of matrix) {
         url: site + "#/" + language + "/",
       });
       await until('return Boolean(document.querySelector(".hero h1"));');
+      const environment = await execute(
+        'return {release:document.querySelector("meta[name=sap-build]")?.content,viewport:{width:innerWidth,height:innerHeight},screen:{width:screen.width,height:screen.height},dpr:devicePixelRatio,userAgent:navigator.userAgent};'
+      );
+      entry.environment = environment;
+      if (process.env.SAP_EXPECTED_RELEASE)
+        check(
+          language + " expected release is loaded",
+          environment.release === process.env.SAP_EXPECTED_RELEASE,
+          environment.release || "missing build identifier"
+        );
+      if (device.options.deviceOrientation)
+        check(
+          language + " tablet orientation is correct",
+          device.options.deviceOrientation === "portrait"
+            ? environment.viewport.height > environment.viewport.width
+            : environment.viewport.width > environment.viewport.height,
+          JSON.stringify(environment.viewport)
+        );
       await execute(
-        'document.documentElement.dataset.theme="light";localStorage.setItem("sap:theme","light");document.documentElement.style.scrollBehavior="auto";'
+        'document.documentElement.dataset.theme="light";localStorage.setItem("sap:theme","light");document.documentElement.style.scrollBehavior="auto";scrollTo({top:0,behavior:"instant"});'
       );
       check(
         language + " homepage renders",
