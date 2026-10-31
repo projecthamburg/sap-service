@@ -22,6 +22,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createPlanReviewService } from "./plan-review.mjs";
 import { createOutbox, queuedNotification, outboxKey } from "./outbox.mjs";
 import { validatePayload, validateAttachment } from "./validation.mjs";
 import { restoreState, estimateInput, validateStep } from "../src/model.js";
@@ -197,7 +198,7 @@ async function rateLimit(event) {
   return result.Attributes.count <= 8;
 }
 async function readRecord(reference) {
-  if (!/^SAP-[QA]-[A-F0-9]{12}$/.test(reference || "")) return null;
+  if (!/^SAP-[QAP]-[A-F0-9]{12}$/.test(reference || "")) return null;
   return (
     (
       await db.send(
@@ -223,6 +224,7 @@ async function removeRecord(record) {
   );
 }
 const outbox = createOutbox({ db, table: TABLE, readRecord });
+const planReview = createPlanReviewService({db,s3,table:TABLE,bucket:BUCKET,readRecord,secureEqual,rateLimit});
 
 export async function handler(event) {
   if (
@@ -249,6 +251,7 @@ export async function handler(event) {
         status: "ok",
         forms: Boolean(TABLE && BUCKET),
         uploadMode: "direct",
+        planReview: { enabled: process.env.PLAN_REVIEW_ENABLED === "true" && Boolean(process.env.OPENAI_API_KEY) },
         region,
         notifications: {
           enabled: process.env.NOTIFICATIONS_ENABLED === "true",
@@ -281,6 +284,10 @@ export async function handler(event) {
         return json({ error: "Invalid request." }, 400, origin);
       }
     }
+    if (path.startsWith("/v1/plan-review/") && method === "POST") {
+      const response = await planReview.handle(path.split("/").pop(),body,event,admin);
+      return json(response.data,response.status,origin);
+    }
     if (path === "/admin/submissions" && method === "GET") {
       const cursor = new URLSearchParams(event.rawQueryString || "").get("cursor") || event.queryStringParameters?.cursor;
       let startKey;
@@ -288,7 +295,7 @@ export async function handler(event) {
         try {
           if (cursor.length > 1000) throw Error();
           const value = JSON.parse(Buffer.from(cursor, "base64url").toString());
-          if (!/^SAP-[QA]-[A-F0-9]{12}$/.test(value.pk) || value.recordType !== "received" || !/^\d{4}-\d{2}-\d{2}T[0-9:.]+Z$/.test(value.receivedAt)) throw Error();
+          if (!/^SAP-[QAP]-[A-F0-9]{12}$/.test(value.pk) || value.recordType !== "received" || !/^\d{4}-\d{2}-\d{2}T[0-9:.]+Z$/.test(value.receivedAt)) throw Error();
           startKey = {pk:value.pk, recordType:"received", receivedAt:value.receivedAt};
         } catch { return json({error:"Invalid page cursor."}, 400, origin); }
       }

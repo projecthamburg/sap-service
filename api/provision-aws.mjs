@@ -327,6 +327,11 @@ const variables = {
   RATE_SALT: rateSalt,
   ALLOWED_ORIGINS: origins,
   SITE_URL: siteUrl,
+  PLAN_REVIEW_ENABLED: "true",
+  PLAN_DAILY_TILE_LIMIT: "256",
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+  OPERATING_STAGE: operations.stage,
+  OPERATOR_NAME: operations.stage === "proposal" ? operations.operator.name : operations.contact.name,
   NOTIFICATION_FROM:
     process.env.SAP_NOTIFICATION_FROM || operations.notifications.from,
   NOTIFICATION_TO:
@@ -379,7 +384,7 @@ if (exists) {
       Runtime: "nodejs22.x",
       Handler: "index.handler",
       MemorySize: 256,
-      Timeout: 30,
+      Timeout: 120,
       Environment: { Variables: variables },
     })
   );
@@ -399,7 +404,7 @@ if (exists) {
           Handler: "index.handler",
           Architectures: ["arm64"],
           MemorySize: 256,
-          Timeout: 30,
+          Timeout: 120,
           Code: { ZipFile: zip },
           Environment: { Variables: variables },
           Description: "SAP Service private quotation and careers submissions",

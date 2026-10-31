@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "protocol": "sap-journey-audit-v1",
+  "syntheticIdentityPrefix": "SAP QA",
+  "ownedEmail": "info@projecthamburg.com",
+  "clients": [
+    {"id":"01","scenario":"Montréal condo, ten-room schedule","language":"en","requiredChecks":["missing-city-blocked","PDF-inputs-match-server","private-plan-and-photo","consultation-booked","only-own-booking-deleted"]},
+    {"id":"02","scenario":"Laval commercial, three phases, heavy conditions","language":"fr","requiredChecks":["temporary-failure-preserves-inputs","retry-receipt","PDF-inputs-match-server","consultation-booked","only-own-booking-deleted"]},
+    {"id":"03","scenario":"Ottawa fitness studio, 240 m², phone viewport","language":"fr","requiredChecks":["metric-conversion","no-horizontal-overflow","PDF-inputs-match-server","consultation-booked","only-own-booking-deleted"]},
+    {"id":"04","scenario":"Toronto offices plus large-plan stitching extension","language":"en","requiredChecks":["site-assessment-flag","ragged-edge-tile-coverage","overlap-evidence-deduplicated","pixel-coordinate-provenance","no-false-complete-coverage","consultation-booked","only-own-booking-deleted"]},
+    {"id":"05","scenario":"Gatineau renovation plus plan/input matching extension","language":"en","requiredChecks":["extra-zero-warning","confirmation-invalidated-by-edit","gross-area-contradiction-blocked","units-and-plan-input-conflicts","no-silent-price-input-change","consultation-booked","only-own-booking-deleted"]}
+  ],
+  "applicants":[
+    {"id":"01","scenario":"Entry-level applicant","checks":["required-fields","missing-availability-guidance","private-resume-receipt"]},
+    {"id":"02","scenario":"French mobile applicant","checks":["invalid-file-rejected","missing-resume-blocked","private-resume-receipt"]},
+    {"id":"03","scenario":"Experienced Ontario applicant","checks":["exact-hours-instead-of-grid","private-resume-receipt"]}
+  ],
+  "evidenceRules":["Record source commit and deployed build separately.","Keep raw attempts, failures and resolutions; a corrected test is not evidence that the first attempt passed.","Keep personal data, credentials, inbox tokens and signed file URLs out of public evidence.","A receipt, provider acceptance and confirmed email delivery are different states.","Tile coverage is not proof that every room or dimension was recognized.","Retain original geometry, raw readings, normalized measurements, links, conflicts and explicit review decisions.","Delete only recorded synthetic references and booking IDs after verification."]
+}

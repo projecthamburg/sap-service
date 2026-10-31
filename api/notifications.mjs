@@ -9,6 +9,8 @@ const escape = (value) =>
 export function notificationEmail(record) {
   const payload = record.payload,
     contact = payload.contact || payload;
+  const operatorName = process.env.OPERATOR_NAME || "Project Hamburg";
+  const intakeLabel = `${operatorName} · ${process.env.OPERATING_STAGE === "live" ? "Website intake / Réception du site" : "Proposal intake / Réception de la proposition"}`;
   const title =
     record.kind === "quote"
       ? "Quotation request / Demande de soumission"
@@ -65,7 +67,7 @@ export function notificationEmail(record) {
     reply_to: contact.email,
     subject: `SAP — ${title} — ${record.pk}`,
     text: [
-      "SAP Service Inc. — Project Hamburg proposal intake",
+      `SAP Service Inc. — ${intakeLabel}`,
       title,
       "",
       ...rows.map(([k, v]) => `${k}: ${v}`),
@@ -77,7 +79,7 @@ export function notificationEmail(record) {
     ].join("\n"),
     html: `<div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;color:#1e2d53"><div style="background:#1e2d53;color:white;padding:28px"><p style="margin:0 0 12px;font-size:12px;letter-spacing:2px">SAP SERVICE INC.</p><h1 style="font-size:24px;margin:0">${escape(
       title
-    )}</h1><p>Project Hamburg · Proposal intake</p></div><div style="padding:24px;background:#f4f5f7"><table style="width:100%;border-collapse:collapse">${rows
+    )}</h1><p>${escape(intakeLabel)}</p></div><div style="padding:24px;background:#f4f5f7"><table style="width:100%;border-collapse:collapse">${rows
       .map(
         ([k, v]) =>
           `<tr><th style="vertical-align:top;text-align:left;padding:12px 12px 12px 0;border-bottom:1px solid #dfe3e9;font-size:13px">${escape(
