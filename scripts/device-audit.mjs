@@ -654,6 +654,11 @@ for (const device of matrix) {
       JSON.stringify(report, null, 2)
     );
   }
+  if (
+    process.env.SAP_STOP_AFTER_DEVICE_FAILURE === "true" &&
+    entry.results.some((result) => !result.passed)
+  )
+    break;
 }
 console.log(
   "BrowserStack checks:",

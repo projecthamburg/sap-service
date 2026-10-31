@@ -1,4 +1,4 @@
-import * as pdfjs from "pdfjs-dist/build/pdf.mjs";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import {
   planTiles,
   coverageAudit,
@@ -9,7 +9,7 @@ import {
 } from "./plan-geometry.js";
 import { escapeHTML as esc } from "./utils.js";
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "./vendor/pdfjs/pdf.worker.min.mjs",
+  "./vendor/pdfjs/pdf.worker.min.mjs?v=6.4.299-legacy",
   document.baseURI
 ).href;
 const pause = () => new Promise((r) => setTimeout(r, 0));
@@ -790,7 +790,13 @@ export function createPlanReview({
         );
       }
     } catch (e) {
-      error = e.message;
+      error =
+        name === "preview" && !(e instanceof RangeError)
+          ? say(
+              "This page could not be previewed. Try an unlocked PDF or a simpler image export, or continue with manual measurements.",
+              "L’aperçu de cette page est indisponible. Essayez un PDF déverrouillé ou une image simplifiée, ou continuez avec des mesures manuelles."
+            )
+          : e.message;
     } finally {
       busy = false;
       draw();

@@ -4898,3 +4898,5 @@ dialog::backdrop {
 .plan-conflict { margin: 1rem 0; padding-top: 1rem; border-top: 1px solid currentColor; }
 .plan-conflict .field { margin-top: .75rem; }
 .plan-match-success { padding: 1rem; background: rgba(28,130,85,.08); }
+
+.plan-review-panel .form-error { overflow-wrap: anywhere; min-width: 0; }

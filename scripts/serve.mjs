@@ -1,5 +1,9 @@
 import http from "node:http";
-import { loadPublicConfiguration, loadOperations, configureDocument } from "./configuration.mjs";
+import {
+  loadPublicConfiguration,
+  loadOperations,
+  configureDocument,
+} from "./configuration.mjs";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 const root = resolve(process.argv.includes("--dist") ? "dist" : ".");
@@ -43,10 +47,23 @@ const server = http.createServer(async (req, res) => {
     const relative =
       pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
     let target = resolve(root, relative);
-    if (!process.argv.includes("--dist") && ["src/pdf-export.js","src/plan-review.js"].includes(relative))
+    if (
+      !process.argv.includes("--dist") &&
+      ["src/pdf-export.js", "src/plan-review.js"].includes(relative)
+    )
       target = resolve(".local/frontend", relative.slice(4));
-    if (!process.argv.includes("--dist") && /^vendor\/pdfjs\/(?:pdf\.worker\.min\.mjs|(?:standard_fonts|cmaps|wasm)\/[a-zA-Z0-9_.-]+)$/.test(relative)) {
-      target=resolve("node_modules/pdfjs-dist",relative.replace("vendor/pdfjs/", "").replace("pdf.worker.min.mjs","build/pdf.worker.min.mjs"));
+    if (
+      !process.argv.includes("--dist") &&
+      /^vendor\/pdfjs\/(?:pdf\.worker\.min\.mjs|(?:standard_fonts|cmaps|wasm)\/[a-zA-Z0-9_.-]+)$/.test(
+        relative
+      )
+    ) {
+      target = resolve(
+        "node_modules/pdfjs-dist",
+        relative
+          .replace("vendor/pdfjs/", "")
+          .replace("pdf.worker.min.mjs", "legacy/build/pdf.worker.min.mjs")
+      );
     }
     if (!target.startsWith(root + sep)) {
       res.writeHead(403);
@@ -61,13 +78,12 @@ const server = http.createServer(async (req, res) => {
     let body = await readFile(target);
     if (!process.argv.includes("--dist") && relative === "index.html")
       body = Buffer.from(
-        configureDocument(body.toString(), await loadOperations())
-          .replace(
-            "</head>",
-            `<script type="application/json" id="site-config">${JSON.stringify(
-              await loadPublicConfiguration()
-            ).replaceAll("<", "\\u003c")}</script></head>`
-          )
+        configureDocument(body.toString(), await loadOperations()).replace(
+          "</head>",
+          `<script type="application/json" id="site-config">${JSON.stringify(
+            await loadPublicConfiguration()
+          ).replaceAll("<", "\\u003c")}</script></head>`
+        )
       );
     if (!process.argv.includes("--dist") && relative === "site-config.json")
       body = Buffer.from(JSON.stringify(await loadPublicConfiguration()));
