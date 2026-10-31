@@ -192,6 +192,7 @@ export function publicContact(config) {
     phone,
     phoneDisplay: phone ? c.phoneDisplay || phone : "",
     name: c.name || "Project Hamburg",
+    careOf: typeof c.careOf === "string" ? c.careOf : "",
     mailto: `mailto:${email}`,
     primaryHref: phone ? `tel:${phone}` : `mailto:${email}`,
   };

@@ -25,6 +25,7 @@ export async function createEstimatePDF(snapshot, assets) {
     language = snapshot.language || "en",
     config = snapshot.config || {},
     fr = language === "fr";
+  const imperial = fr ? "pi²" : "sq ft";
   for (const step of [0, 1, 2])
     if (validateStep(scope, step))
       throw Error(
@@ -272,7 +273,7 @@ export async function createEstimatePDF(snapshot, assets) {
   paragraph(fr ? "Fourchette de planification" : "Planning range", {
     size: 11,
     color: palette.muted,
-    gap: 4,
+    gap: 18,
   });
   paragraph(`${money(r.low)} – ${money(r.high)}`, {
     size: 25,
@@ -281,7 +282,7 @@ export async function createEstimatePDF(snapshot, assets) {
   });
   row(
     fr ? "Superficie nettoyable" : "Cleanable area",
-    `${number(r.totalSqFt)} sq ft / ${number(fromSqFt(r.totalSqFt, "m2"))} m²`
+    `${number(r.totalSqFt)} ${imperial} / ${number(fromSqFt(r.totalSqFt, "m2"))} m²`
   );
   row(
     fr
@@ -335,7 +336,7 @@ export async function createEstimatePDF(snapshot, assets) {
   );
   row(
     fr ? "Coût indicatif par pied carré" : "Planning cost per square foot",
-    `${money(r.perSqFt)} / sq ft`
+    `${money(r.perSqFt)} / ${imperial}`
   );
   paragraph(
     fr
@@ -367,19 +368,19 @@ export async function createEstimatePDF(snapshot, assets) {
             : "Entered area";
       row(
         `${String(index + 1).padStart(2, "0")} · ${room.name} (${dim})`,
-        `${number(area)} sq ft / ${number(fromSqFt(area, "m2"))} m²`
+        `${number(area)} ${imperial} / ${number(fromSqFt(area, "m2"))} m²`
       );
     }
   } else {
     row(
       fr ? "Superficie totale saisie" : "Entered total cleanable area",
-      `${number(r.totalSqFt)} sq ft / ${number(fromSqFt(r.totalSqFt, "m2"))} m²`
+      `${number(r.totalSqFt)} ${imperial} / ${number(fromSqFt(r.totalSqFt, "m2"))} m²`
     );
     row(
       fr
         ? "Aires communes incluses dans le total"
         : "Common areas included in the total",
-      `${number(scope.common)} sq ft`
+      `${number(scope.common)} ${imperial}`
     );
     row(
       fr ? "Étages / unités" : "Floors / units",

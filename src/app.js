@@ -150,7 +150,7 @@ function footer(t) {
     contact.email
   )}</a><p>${esc(
     contact.name
-  )}<br>Montréal, Québec</p><a href="#/${language}/careers" class="footer-careers">${
+  )}${contact.careOf ? `<br>C/O ${esc(contact.careOf)}` : ""}<br>Montréal, Québec</p><a href="#/${language}/careers" class="footer-careers">${
     t.footer.careers
   }${icon(
     "arrow"

@@ -1,9 +1,23 @@
 {
   "version": 1,
   "stage": "proposal",
-  "operator": { "name": "Project Hamburg", "website": "https://projecthamburg.com/", "email": "info@projecthamburg.com" },
-  "contact": { "name": "Project Hamburg", "email": "info@projecthamburg.com", "phone": null, "phoneDisplay": null },
+  "operator": {
+    "name": "Project Hamburg",
+    "website": "https://projecthamburg.com/",
+    "email": "info@projecthamburg.com"
+  },
+  "contact": {
+    "name": "Project Hamburg",
+    "email": "info@projecthamburg.com",
+    "phone": null,
+    "phoneDisplay": null,
+    "careOf": "SAP Services"
+  },
   "siteUrl": "https://projecthamburg.github.io/sap-service/",
   "bookingUrl": "https://schedule.projecthamburg.com/booking/sap-service-cleanup",
-  "notifications": { "enabled": true, "from": "Project Hamburg · SAP proposal <info@projecthamburg.com>", "to": "info@projecthamburg.com" }
+  "notifications": {
+    "enabled": true,
+    "from": "Project Hamburg · SAP proposal <info@projecthamburg.com>",
+    "to": "info@projecthamburg.com"
+  }
 }

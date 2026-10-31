@@ -213,7 +213,7 @@ export function mountInbox(root, language, config, all) {
                   contact.company ? ` · ${esc(contact.company)}` : ""
                 }</p><small>${t.receipt}: ${new Date(
                   record.receivedAt || record.createdAt
-                ).toLocaleString(all.lang)}</small><p class="fine-print">${t.notification}: ${esc(t.emailStates[record.notification?.status] || record.notification?.status || "—")}${record.notification?.attempts ? ` · ${record.notification.attempts} ${language === "fr" ? "essai(s)" : "attempt(s)"}` : ""}</p><details><summary>${
+                ).toLocaleString(all.lang)}</small><p class="fine-print">${t.notification}: ${esc(t.emailStates[record.notification?.state] || record.notification?.state || "—")}${record.notification?.attempts ? ` · ${record.notification.attempts} ${language === "fr" ? "essai(s)" : "attempt(s)"}` : ""}</p><details><summary>${
                   t.more
                 }${icon("plus")}</summary>${details(record)}</details>${
                   record.files.length
