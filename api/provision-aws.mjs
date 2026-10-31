@@ -2,6 +2,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { build } from "esbuild";
+import { loadOperations } from "../scripts/configuration.mjs";
+import {
+  EventBridgeClient,
+  PutRuleCommand,
+  PutTargetsCommand,
+} from "@aws-sdk/client-eventbridge";
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 import {
   IAMClient,
@@ -52,6 +58,7 @@ import {
 try {
   process.loadEnvFile(".env");
 } catch {}
+const operations = await loadOperations();
 const existingOnly = process.env.SAP_DEPLOY_EXISTING === "true";
 const region = process.env.SAP_AWS_REGION || "ca-central-1";
 const credentials = process.env.AWS_BUSINESS_ACCESS_KEY_ID
@@ -71,8 +78,8 @@ const executionRoleName = "sap-service-api-execution",
   executionRoleArn = `arn:aws:iam::${account}:role/${executionRoleName}`;
 const deployRoleName = "sap-service-github-deploy",
   deployRoleArn = `arn:aws:iam::${account}:role/${deployRoleName}`;
-const siteUrl = "https://projecthamburg.github.io/sap-service/";
-const origins = "https://projecthamburg.github.io,http://127.0.0.1:4173";
+const siteUrl = operations.siteUrl;
+const origins = `${new URL(siteUrl).origin},http://127.0.0.1:4173`;
 const lambda = new LambdaClient(options),
   s3 = new S3Client(options),
   dynamo = new DynamoDBClient(options),
@@ -321,11 +328,13 @@ const variables = {
   ALLOWED_ORIGINS: origins,
   SITE_URL: siteUrl,
   NOTIFICATION_FROM:
-    process.env.SAP_NOTIFICATION_FROM ||
-    "SAP Service <sap-service@projecthamburg.com>",
-  NOTIFICATION_TO: "servicesapinc@gmail.com",
+    process.env.SAP_NOTIFICATION_FROM || operations.notifications.from,
+  NOTIFICATION_TO:
+    process.env.SAP_NOTIFICATION_TO || operations.notifications.to,
   RESEND_API_KEY: process.env.RESEND_API_KEY || "",
-  NOTIFICATIONS_ENABLED: process.env.SAP_NOTIFICATIONS_ENABLED || "true",
+  NOTIFICATIONS_ENABLED:
+    process.env.SAP_NOTIFICATIONS_ENABLED ||
+    String(operations.notifications.enabled),
 };
 console.log("Building and deploying the private form service…");
 await mkdir("api/dist", { recursive: true });
@@ -525,6 +534,49 @@ if (!existingOnly) {
     })
   );
 }
+const notificationScheduleArn = `arn:aws:events:${region}:${account}:rule/sap-service-email-outbox`;
+if (!existingOnly) {
+  const events = new EventBridgeClient(options);
+  await events.send(
+    new PutRuleCommand({
+      Name: "sap-service-email-outbox",
+      ScheduleExpression: "rate(1 minute)",
+      State: "ENABLED",
+      Description: "Retry only SAP Service's private notification outbox",
+      Tags: [{ Key: "Application", Value: "sap-service" }],
+    })
+  );
+  try {
+    await lambda.send(
+      new AddPermissionCommand({
+        FunctionName: functionName,
+        StatementId: "SAPNotificationSchedule",
+        Action: "lambda:InvokeFunction",
+        Principal: "events.amazonaws.com",
+        SourceArn: notificationScheduleArn,
+      })
+    );
+  } catch (error) {
+    if (error.name !== "ResourceConflictException") throw error;
+  }
+  const targets = await events.send(
+    new PutTargetsCommand({
+      Rule: "sap-service-email-outbox",
+      Targets: [
+        {
+          Id: "sap-email-outbox",
+          Arn: `arn:aws:lambda:${region}:${account}:function:${functionName}`,
+          RetryPolicy: {
+            MaximumEventAgeInSeconds: 3600,
+            MaximumRetryAttempts: 3,
+          },
+        },
+      ],
+    })
+  );
+  if (targets.FailedEntryCount)
+    throw Error("Could not connect SAP email retry schedule.");
+}
 const apiUrl = functionUrl.replace(/\/$/, "");
 const response = await fetch(`${apiUrl}/health`, {
   signal: AbortSignal.timeout(20000),
@@ -550,6 +602,7 @@ await writeFile(
       executionRoleArn,
       deployRoleArn,
       apiUrl,
+      notificationScheduleArn,
     },
     null,
     2

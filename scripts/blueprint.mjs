@@ -24,7 +24,7 @@ const selected = [...new Set(names)]
       /^(?:src|scripts)\/.+\.(?:m?js|css)$/.test(name) ||
       /^api\/[^/]+\.mjs$/.test(name) ||
       /^\.github\/workflows\/[^/]+\.ya?ml$/.test(name) ||
-      ["index.html", "package.json"].includes(name)
+      ["index.html", "package.json", "config/operations.json", "public/site-config.json"].includes(name)
   )
   .sort();
 if (!selected.length)

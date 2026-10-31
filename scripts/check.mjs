@@ -62,7 +62,7 @@ for (const asset of expectedAssets) {
   }
 }
 const forbidden =
-  /^(?:\.env(?:\..*)?|appednix|\.git|\.openchrome|api|tests|scripts|docs)$/;
+  /^(?:\.env(?:\..*)?|appednix|\.git|\.openchrome|api|tests|scripts|docs|config)$/;
 async function scan(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);

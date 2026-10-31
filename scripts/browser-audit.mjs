@@ -96,6 +96,7 @@ async function capture(name, selector) {
 try {
   for (const language of ["en", "fr"]) {
     await goto("#/" + language + "/");
+    check(`${language}: calendar starts loading before scrolling`, await page.$eval("#booking-frame", e => e.loading === "eager" && e.getAttribute("src") === e.dataset.src));
     check(
       `${language}: homepage language`,
       await page.evaluate(

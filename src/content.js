@@ -434,7 +434,7 @@ export const content = {
         "Model: a 4-person crew, 8 productive hours per crew-day, phase-specific production rates, mobilization per visit, 12% overhead, 15% markup and a ±12% planning range. Rates are illustrative and editable in the pricing configuration.",
       exclusionText:
         "Excludes taxes, exterior façades, hazardous materials, specialized healthcare disinfection, corrective construction work and services outside the agreed scope.",
-      download: "Print / save as PDF",
+      download: "Download estimate PDF",
       export: "Download estimate",
       request: "Request a formal quotation",
       edit: "Edit your scope",
@@ -448,6 +448,8 @@ export const content = {
       private: "Your estimate stays on this device.",
       validation: "Please check the highlighted fields.",
       phaseError: "Choose at least one cleaning phase.",
+      plausibilityError:
+        "Please correct or confirm the unusual measurements before continuing.",
       areaError: "Enter a positive cleanable area, up to 10,000,000 sq ft.",
       roomError: "Give every room a name and positive dimensions or area.",
       grossError:
@@ -536,6 +538,8 @@ export const content = {
       privacy: "Privacy",
       terms: "Estimate terms",
       credit: "Montréal, Québec · Since 2020",
+      designedBy: "Website designed and built by",
+      emailUs: "Email us",
       top: "Back to top",
     },
     careers: {
@@ -607,14 +611,14 @@ export const content = {
       emailReady:
         "Your email draft is ready. Attach your résumé and send it from your email app to complete your application.",
       error:
-        "We couldn’t submit your application. Please try again or email servicesapinc@gmail.com.",
+        "We couldn’t submit your application. Please try again or email {contactEmail}.",
       resumeError: "Choose a PDF or DOCX résumé under 5 MB.",
       availabilityError:
         "Select at least one availability block, or describe your hours.",
       yes: "Yes",
       no: "No",
       privacy:
-        "Your information is used for recruitment. To request access, correction or deletion, contact servicesapinc@gmail.com. See our privacy notice.",
+        "Your information is used for recruitment. To request access, correction or deletion, contact {contactEmail}. See our privacy notice.",
       pending: "Sending securely…",
     },
     request: {
@@ -634,7 +638,7 @@ export const content = {
       success: "Request received. Your reference:",
       emailReady:
         "Your email draft is ready. Review it, attach any plans or photographs, and send it to complete your request.",
-      error: "Your request wasn’t sent. Try again or contact Frank directly.",
+      error: "Your request wasn’t sent. Try again or contact us directly.",
       pending: "Sending securely…",
     },
     legal: {
@@ -643,7 +647,7 @@ export const content = {
       privacy: [
         [
           "Who to contact",
-          "SAP Service Inc., Montréal, Québec. For questions, access, correction or deletion requests, contact Frank Sungwa at servicesapinc@gmail.com or 514-294-3063.",
+          "This SAP Service Inc. proposal is operated by {operatorName}. Until an agreed handover, enquiries, uploads and recruitment submissions are managed by {operatorName}. For access, correction or deletion requests, contact {contactEmail}.",
         ],
         [
           "Information you choose to share",
@@ -655,7 +659,7 @@ export const content = {
         ],
         [
           "Third-party services",
-          "The embedded calendar is operated by Project Hamburg and processes booking information under its own terms. Resend processes email notifications to SAP, including contact and project or application details; notification processing may occur outside Canada. Attached plans and résumés remain in private storage. Fonts are served from this website; there are no advertising or analytics trackers.",
+          "The embedded calendar is operated by Project Hamburg and processes booking information under its own terms. Resend processes email notifications to the proposal operator, including contact and project or application details; notification processing may occur outside Canada. Attached plans and résumés remain in private storage. Fonts are served from this website; there are no advertising or analytics trackers.",
         ],
         [
           "Retention and your choices",
@@ -1124,7 +1128,7 @@ export const content = {
         "Modèle : équipe de 4 personnes, 8 heures productives par jour-équipe, rendements par phase, mobilisation par visite, 12 % de frais généraux, 15 % de majoration et fourchette de ±12 %. Les taux illustratifs sont modifiables dans la configuration.",
       exclusionText:
         "Sont exclus : taxes, façades extérieures, matières dangereuses, désinfection spécialisée en santé, travaux correctifs et services hors de la portée convenue.",
-      download: "Imprimer / enregistrer en PDF",
+      download: "Télécharger le PDF",
       export: "Télécharger l’estimation",
       request: "Demander une soumission",
       edit: "Modifier la portée",
@@ -1138,6 +1142,8 @@ export const content = {
       private: "Votre estimation reste sur cet appareil.",
       validation: "Vérifiez les champs indiqués.",
       phaseError: "Choisissez au moins une phase de nettoyage.",
+      plausibilityError:
+        "Corrigez ou confirmez les mesures inhabituelles avant de continuer.",
       areaError: "Indiquez une superficie positive, jusqu’à 10 000 000 pi².",
       roomError:
         "Nommez chaque pièce et indiquez des mesures ou une superficie positives.",
@@ -1227,6 +1233,8 @@ export const content = {
       privacy: "Confidentialité",
       terms: "Modalités d’estimation",
       credit: "Montréal, Québec · Depuis 2020",
+      designedBy: "Site conçu et réalisé par",
+      emailUs: "Nous écrire",
       top: "Retour en haut",
     },
     careers: {
@@ -1298,14 +1306,14 @@ export const content = {
       emailReady:
         "Votre brouillon est prêt. Joignez votre CV et envoyez-le depuis votre application courriel pour terminer la candidature.",
       error:
-        "Votre candidature n’a pas pu être envoyée. Réessayez ou écrivez à servicesapinc@gmail.com.",
+        "Votre candidature n’a pas pu être envoyée. Réessayez ou écrivez à {contactEmail}.",
       resumeError: "Choisissez un CV PDF ou DOCX de moins de 5 Mo.",
       availabilityError:
         "Choisissez au moins une plage, ou décrivez vos disponibilités.",
       yes: "Oui",
       no: "Non",
       privacy:
-        "Vos renseignements servent au recrutement. Pour un accès, une rectification ou une suppression, écrivez à servicesapinc@gmail.com. Consultez notre avis de confidentialité.",
+        "Vos renseignements servent au recrutement. Pour un accès, une rectification ou une suppression, écrivez à {contactEmail}. Consultez notre avis de confidentialité.",
       pending: "Envoi sécurisé…",
     },
     request: {
@@ -1325,7 +1333,7 @@ export const content = {
       success: "Demande reçue. Votre référence :",
       emailReady:
         "Votre brouillon est prêt. Vérifiez-le, joignez vos plans ou photos et envoyez-le pour terminer la demande.",
-      error: "La demande n’a pas été envoyée. Réessayez ou contactez Frank.",
+      error: "La demande n’a pas été envoyée. Réessayez ou contactez-nous.",
       pending: "Envoi sécurisé…",
     },
     legal: {
@@ -1334,7 +1342,7 @@ export const content = {
       privacy: [
         [
           "Personne-ressource",
-          "SAP Service Inc., Montréal, Québec. Pour toute question ou demande d’accès, de rectification ou de suppression : Frank Sungwa, servicesapinc@gmail.com ou 514-294-3063.",
+          "Cette proposition pour SAP Service Inc. est exploitée par {operatorName}. Jusqu’au transfert convenu, {operatorName} gère les demandes, fichiers et candidatures. Pour un accès, une rectification ou une suppression, écrivez à {contactEmail}.",
         ],
         [
           "Renseignements que vous partagez",
@@ -1346,7 +1354,7 @@ export const content = {
         ],
         [
           "Services tiers",
-          "Le calendrier intégré est exploité par Project Hamburg selon ses modalités. Resend traite les notifications à SAP, y compris les coordonnées et renseignements du projet ou de la candidature; ce traitement peut avoir lieu hors du Canada. Les plans et CV joints restent dans le stockage privé. Les polices sont hébergées sur ce site, sans traceur publicitaire ou analytique.",
+          "Le calendrier intégré est exploité par Project Hamburg selon ses modalités. Resend traite les notifications destinées à l’exploitant de la proposition, y compris les coordonnées et renseignements du projet ou de la candidature; ce traitement peut avoir lieu hors du Canada. Les plans et CV joints restent dans le stockage privé. Les polices sont hébergées sur ce site, sans traceur publicitaire ou analytique.",
         ],
         [
           "Conservation et choix",
@@ -1381,3 +1389,24 @@ export const content = {
     fileRemove: "Retirer le fichier",
   },
 };
+
+export function getContent(language, config = {}) {
+  const contactEmail = config.contact?.email || "info@projecthamburg.com";
+  const operatorName =
+    config.stage === "live"
+      ? config.contact?.name || "SAP Service Inc."
+      : config.contact?.name || "Project Hamburg";
+  const resolve = (value) =>
+    typeof value === "string"
+      ? value
+          .replaceAll("{contactEmail}", contactEmail)
+          .replaceAll("{operatorName}", operatorName)
+      : Array.isArray(value)
+      ? value.map(resolve)
+      : value && typeof value === "object"
+      ? Object.fromEntries(
+          Object.entries(value).map(([key, item]) => [key, resolve(item)])
+        )
+      : value;
+  return resolve(content[language]);
+}

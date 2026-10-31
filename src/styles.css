@@ -2456,6 +2456,20 @@ input[type="checkbox"] {
 .site-footer a:hover {
   color: #ff91a7;
 }
+.site-credit {
+  margin: 0;
+  padding-bottom: 24px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #b5c2d6;
+}
+.site-credit a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .toast {
   pointer-events: none;
   position: fixed;
@@ -4857,3 +4871,8 @@ dialog::backdrop {
     height: 18px;
   }
 }
+
+.measurement-warning {margin-top:24px;padding:20px;border:1px solid var(--line);border-left:4px solid var(--coral-dark);border-radius:4px;background:var(--wash);text-align:left;font-size:13px;line-height:1.6;}
+.measurement-warning h4 {font-size:16px;margin:0 0 8px;}
+.measurement-warning ul {padding-left:20px;margin:14px 0;}
+.measurement-warning li+li {margin-top:8px;}

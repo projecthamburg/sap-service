@@ -1,6 +1,7 @@
 import { icon } from "./icons.js";
 import {
   escapeHTML as esc,
+  publicContact,
   formField as field,
   selectField as select,
   validateFiles,
@@ -10,6 +11,7 @@ import { sendForm, emailDraft, mountTurnstile } from "./forms.js";
 
 export function mountCareers(root, all, language, config) {
   const t = all.careers;
+  const contact = publicContact(config);
   root.innerHTML = `<section class="careers-hero"><div class="container"><a class="careers-back" href="#">← ${
     t.back
   }</a><div class="careers-hero-copy"><p class="eyebrow">${t.eyebrow}</p><h1>${
@@ -31,9 +33,11 @@ export function mountCareers(root, all, language, config) {
     )
     .join("")}<div class="careers-contact"><p>${
     all.booking.contact
-  }</p><a href="tel:+15142943063">514 294 3063${icon(
-    "diagonal"
-  )}</a><a href="mailto:servicesapinc@gmail.com">servicesapinc@gmail.com</a></div></aside><div class="application-card"><h2>${
+  }</p><a href="${esc(contact.primaryHref)}">${esc(
+    contact.phoneDisplay || all.footer.emailUs
+  )}${icon("diagonal")}</a><a href="${esc(contact.mailto)}">${esc(
+    contact.email
+  )}</a></div></aside><div class="application-card"><h2>${
     t.heading
   }</h2><p class="step-copy">${
     t.intro
@@ -201,7 +205,8 @@ export function mountCareers(root, all, language, config) {
         `SAP — ${language === "fr" ? "Candidature" : "Application"} — ${
           values.name
         }`,
-        lines
+        lines,
+        contact.email
       );
       status.textContent = t.emailReady;
       return;

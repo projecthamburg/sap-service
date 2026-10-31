@@ -24,6 +24,21 @@ let rateCount = 1;
 mock.method(DynamoDBDocumentClient.prototype, "send", async (command) => {
   const input = command.input,
     type = command.constructor.name;
+  if (type === "TransactWriteCommand") {
+    for (const action of input.TransactItems) {
+      if (action.Update && records.get(action.Update.Key.pk)?.status !== "pending")
+        throw Object.assign(new Error("Already received"), {name:"TransactionCanceledException"});
+    }
+    for (const action of input.TransactItems) {
+      if (action.Delete) records.delete(action.Delete.Key.pk);
+      if (action.Put) records.set(action.Put.Item.pk, structuredClone(action.Put.Item));
+      if (action.Update) {
+        const record = records.get(action.Update.Key.pk), v = action.Update.ExpressionAttributeValues;
+        Object.assign(record, {status:v[":received"],recordType:v[":type"],receivedAt:v[":at"],notification:v[":notification"]});
+      }
+    }
+    return {};
+  }
   if (type === "UpdateCommand" && input.Key.pk.startsWith("RATE#"))
     return { Attributes: { count: rateCount } };
   if (type === "PutCommand") {
@@ -35,10 +50,12 @@ mock.method(DynamoDBDocumentClient.prototype, "send", async (command) => {
     records.delete(input.Key.pk);
     return {};
   }
-  if (type === "QueryCommand")
-    return {
-      Items: [...records.values()].filter((r) => r.status === "received"),
-    };
+  if (type === "QueryCommand") {
+    const all = [...records.values()].filter((r) => r.status === "received").sort((a,b) => b.receivedAt.localeCompare(a.receivedAt));
+    const start = input.ExclusiveStartKey ? all.findIndex(r=>r.pk===input.ExclusiveStartKey.pk)+1 : 0;
+    const items = all.slice(start, start + input.Limit), last = items.at(-1);
+    return {Items:items, ...(start + items.length < all.length ? {LastEvaluatedKey:{pk:last.pk,recordType:last.recordType,receivedAt:last.receivedAt}} : {})};
+  }
   if (type === "UpdateCommand") {
     const record = records.get(input.Key.pk);
     if (record.status !== "pending")
@@ -378,4 +395,27 @@ test("excessive public submissions are rate-limited before storage", async () =>
     rateCount = 1;
   }
   assert.equal(records.size, before);
+});
+
+
+test("authenticated inbox pagination retains older submissions and rejects malformed cursors", async () => {
+  const seeded=[];
+  for(let i=0;i<105;i++) {
+    const pk="SAP-Q-"+i.toString(16).toUpperCase().padStart(12,"0");
+    seeded.push(pk);
+    records.set(pk,{pk,status:"received",recordType:"received",receivedAt:new Date(Date.UTC(2026,0,1,0,0,i)).toISOString(),completionHash:"never-return-this"});
+  }
+  try {
+    const first=parsed(await handler(event("/admin/submissions",null,true,"GET")));
+    assert.equal(first.submissions.length,100);assert.ok(first.nextCursor);
+    const request={...event("/admin/submissions",null,true,"GET"),rawQueryString:"cursor="+first.nextCursor};
+    const second=parsed(await handler(request));
+    const all=[...first.submissions,...second.submissions];
+    assert.ok(seeded.every(pk=>all.some(r=>r.pk===pk)));
+    assert.equal(new Set(all.map(r=>r.pk)).size,all.length);
+    assert.ok(all.every(r=>!r.completionHash));
+    assert.equal(second.nextCursor,null);
+    const invalid=await handler({...request,rawQueryString:"cursor="+Buffer.from(JSON.stringify({pk:seeded[0],recordType:"notification",receivedAt:"2026-01-01T00:00:00.000Z"})).toString("base64url")});
+    assert.equal(invalid.statusCode,400);
+  } finally {for(const pk of seeded) records.delete(pk);}
 });

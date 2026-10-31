@@ -1,3 +1,7 @@
+import {
+  measurementWarnings,
+  measurementFingerprint,
+} from "./measurement-checks.js";
 import { toSqFt, fromSqFt } from "./pricing.js";
 export const freshRoom = () => ({
   id:
@@ -23,6 +27,7 @@ export const initialState = () => ({
   cleanDate: "",
   handoverDate: "",
   occupied: false,
+  measurementConfirmation: "",
   phases: ["final"],
   options: [],
   unit: "ft2",
@@ -124,6 +129,11 @@ export function validateStep(state, step) {
         state.common > state.area)
     )
       return { field: "gross", message: "grossError" };
+    if (
+      measurementWarnings(state).length &&
+      state.measurementConfirmation !== measurementFingerprint(state)
+    )
+      return { field: "measurementConfirmation", message: "plausibilityError" };
   }
   return null;
 }

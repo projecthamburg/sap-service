@@ -92,11 +92,17 @@ export async function sendForm(config, kind, payload, files = [], token = "") {
     clearTimeout(timer);
   }
 }
-export function emailDraft(subject, lines) {
+export function emailDraft(
+  subject,
+  lines,
+  recipient = "info@projecthamburg.com"
+) {
   const a = document.createElement("a");
-  a.href = `mailto:servicesapinc@gmail.com?subject=${encodeURIComponent(
-    subject
-  )}&body=${encodeURIComponent(lines.join("\n"))}`;
+  a.href = `mailto:${encodeURIComponent(
+    recipient
+  )}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
+    lines.join("\n")
+  )}`;
   a.click();
 }
 let turnstilePromise;
@@ -232,7 +238,8 @@ export function openQuote(estimator) {
             estimator.files.map((f) => f.name).join(", ") || "—"
           }`,
           t.emailNote,
-        ]
+        ],
+        config.contact?.email || "info@projecthamburg.com"
       );
       status.textContent = t.emailReady;
       return;

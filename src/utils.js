@@ -180,3 +180,19 @@ export function installLocalizedValidation(root) {
     }
   });
 }
+
+export function publicContact(config) {
+  const c = config.contact || {};
+  const email = /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(c.email || "")
+    ? c.email
+    : "info@projecthamburg.com";
+  const phone = /^\+[0-9]{7,15}$/.test(c.phone || "") ? c.phone : "";
+  return {
+    email,
+    phone,
+    phoneDisplay: phone ? c.phoneDisplay || phone : "",
+    name: c.name || "Project Hamburg",
+    mailto: `mailto:${email}`,
+    primaryHref: phone ? `tel:${phone}` : `mailto:${email}`,
+  };
+}

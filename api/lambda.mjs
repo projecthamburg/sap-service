@@ -18,9 +18,11 @@ import {
   UpdateCommand,
   DeleteCommand,
   QueryCommand,
+  TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createOutbox, queuedNotification, outboxKey } from "./outbox.mjs";
 import { validatePayload, validateAttachment } from "./validation.mjs";
 import { restoreState, estimateInput, validateStep } from "../src/model.js";
 import { estimate, PRICING } from "../src/pricing.js";
@@ -212,87 +214,23 @@ async function removeRecord(record) {
   for (const file of record.files || [])
     await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: file.key }));
   await db.send(
-    new DeleteCommand({ TableName: TABLE, Key: { pk: record.pk } })
+    new TransactWriteCommand({
+      TransactItems: [
+        { Delete: { TableName: TABLE, Key: { pk: record.pk } } },
+        { Delete: { TableName: TABLE, Key: { pk: outboxKey(record.pk) } } },
+      ],
+    })
   );
 }
-async function notify(record) {
-  if (
-    record.isTest ||
-    process.env.NOTIFICATIONS_ENABLED !== "true" ||
-    !process.env.RESEND_API_KEY ||
-    !process.env.NOTIFICATION_FROM ||
-    !process.env.NOTIFICATION_TO
-  )
-    return;
-  const payload = record.payload,
-    contact = payload.contact || payload;
-  const details =
-    record.kind === "quote"
-      ? [
-          `Company: ${contact.company || "—"}`,
-          `Project: ${payload.estimate.scope.name || "—"}`,
-          `Location: ${payload.estimate.scope.city} (${payload.estimate.scope.province})`,
-          `Area: ${payload.estimate.estimate.totalSqFt} sq ft`,
-          `Phases: ${payload.estimate.scope.phases.join(", ")}`,
-          `Cleaning date: ${payload.estimate.scope.cleanDate || "—"}`,
-          `Handover date: ${payload.estimate.scope.handoverDate || "—"}`,
-          `Illustrative planning range: CAD ${Math.round(
-            payload.estimate.estimate.low
-          )}–${Math.round(payload.estimate.estimate.high)} (not a quotation)`,
-          `Notes: ${payload.notes || "—"}`,
-        ]
-      : [
-          `Location: ${payload.city} (${payload.province})`,
-          `Regions: ${payload.regions}`,
-          `Experience: ${payload.experience} years`,
-          `Languages: ${payload.languages}`,
-          `Start: ${payload.start}`,
-          `ASP training: ${payload.asp}`,
-          `Availability: ${payload.availability.join(", ")}`,
-          `Hours: ${payload.hours || "—"}`,
-          `Note: ${payload.cover || "—"}`,
-        ];
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": `sap-${record.pk}`,
-    },
-    body: JSON.stringify({
-      from: process.env.NOTIFICATION_FROM,
-      to: [process.env.NOTIFICATION_TO],
-      reply_to: contact.email,
-      subject: `SAP — ${
-        record.kind === "quote"
-          ? "Quotation request / Demande de soumission"
-          : "Job application / Candidature"
-      } — ${record.pk}`,
-      text: [
-        `SAP Service Inc.`,
-        `Reference: ${record.pk}`,
-        `Name: ${contact.name}`,
-        `Email: ${contact.email}`,
-        `Telephone: ${contact.phone || "—"}`,
-        "",
-        ...details,
-        "",
-        `Private files: ${
-          record.files.map((f) => f.name).join(", ") || "None"
-        }`,
-        "Review and download private files in the SAP inbox:",
-        `${process.env.SITE_URL}#/en/inbox`,
-        "",
-        "Do not forward applicant information or confidential plans unnecessarily.",
-      ].join("\n"),
-    }),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!response.ok)
-    throw new Error(`Notification provider returned ${response.status}`);
-}
+const outbox = createOutbox({ db, table: TABLE, readRecord });
 
 export async function handler(event) {
+  if (
+    event.source === "aws.events" &&
+    event["detail-type"] === "Scheduled Event" &&
+    !event.requestContext
+  )
+    return outbox.processBatch();
   const headers = Object.fromEntries(
     Object.entries(event.headers || {}).map(([key, value]) => [
       key.toLowerCase(),
@@ -312,6 +250,14 @@ export async function handler(event) {
         forms: Boolean(TABLE && BUCKET),
         uploadMode: "direct",
         region,
+        notifications: {
+          enabled: process.env.NOTIFICATIONS_ENABLED === "true",
+          configured: Boolean(
+            process.env.RESEND_API_KEY &&
+              process.env.NOTIFICATION_FROM &&
+              process.env.NOTIFICATION_TO
+          ),
+        },
       },
       200,
       origin
@@ -336,10 +282,21 @@ export async function handler(event) {
       }
     }
     if (path === "/admin/submissions" && method === "GET") {
+      const cursor = new URLSearchParams(event.rawQueryString || "").get("cursor") || event.queryStringParameters?.cursor;
+      let startKey;
+      if (cursor) {
+        try {
+          if (cursor.length > 1000) throw Error();
+          const value = JSON.parse(Buffer.from(cursor, "base64url").toString());
+          if (!/^SAP-[QA]-[A-F0-9]{12}$/.test(value.pk) || value.recordType !== "received" || !/^\d{4}-\d{2}-\d{2}T[0-9:.]+Z$/.test(value.receivedAt)) throw Error();
+          startKey = {pk:value.pk, recordType:"received", receivedAt:value.receivedAt};
+        } catch { return json({error:"Invalid page cursor."}, 400, origin); }
+      }
       const result = await db.send(
         new QueryCommand({
           TableName: TABLE,
           IndexName: "received",
+          ...(startKey ? {ExclusiveStartKey:startKey} : {}),
           KeyConditionExpression: "recordType = :type",
           ExpressionAttributeValues: { ":type": "received" },
           ScanIndexForward: false,
@@ -351,6 +308,7 @@ export async function handler(event) {
           submissions: (result.Items || []).map(
             ({ completionHash, ...record }) => record
           ),
+          nextCursor: result.LastEvaluatedKey ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString("base64url") : null,
         },
         200,
         origin
@@ -389,10 +347,7 @@ export async function handler(event) {
       return json({ error: "Not found." }, 404, origin);
     const [, kind, stage] = match;
     if (stage === "prepare") {
-      if (
-        !(admin && headers["x-sap-test"] === "true") &&
-        !(await rateLimit(event))
-      )
+      if (!admin && !(await rateLimit(event)))
         return json(
           { error: "Please wait before sending another request." },
           429,
@@ -542,34 +497,67 @@ export async function handler(event) {
       }
     }
     const receivedAt = new Date().toISOString();
+    const job = queuedNotification(record);
+    const notification = {
+      state: job ? "pending" : record.isTest ? "suppressed" : "disabled",
+      attempts: 0,
+      ...(job ? { recipient: job.email.to[0] } : {}),
+    };
     try {
       await db.send(
-        new UpdateCommand({
-          TableName: TABLE,
-          Key: { pk: record.pk },
-          UpdateExpression:
-            "SET #status = :received, recordType = :type, receivedAt = :at",
-          ConditionExpression: "#status = :pending",
-          ExpressionAttributeNames: { "#status": "status" },
-          ExpressionAttributeValues: {
-            ":received": "received",
-            ":type": "received",
-            ":at": receivedAt,
-            ":pending": "pending",
-          },
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Update: {
+                TableName: TABLE,
+                Key: { pk: record.pk },
+                UpdateExpression:
+                  "SET #status = :received, recordType = :type, receivedAt = :at, notification = :notification",
+                ConditionExpression: "#status = :pending",
+                ExpressionAttributeNames: { "#status": "status" },
+                ExpressionAttributeValues: {
+                  ":received": "received",
+                  ":type": "received",
+                  ":at": receivedAt,
+                  ":pending": "pending",
+                  ":notification": notification,
+                },
+              },
+            },
+            ...(job
+              ? [
+                  {
+                    Put: {
+                      TableName: TABLE,
+                      Item: job,
+                      ConditionExpression: "attribute_not_exists(pk)",
+                    },
+                  },
+                ]
+              : []),
+          ],
         })
       );
     } catch (error) {
-      if (error.name !== "ConditionalCheckFailedException") throw error;
-      return json({ reference: record.pk }, 200, origin);
+      if (
+        [
+          "ConditionalCheckFailedException",
+          "TransactionCanceledException",
+        ].includes(error.name) &&
+        (await readRecord(record.pk))?.status === "received"
+      )
+        return json({ reference: record.pk }, 200, origin);
+      throw error;
     }
-    try {
-      await notify(record);
-    } catch (error) {
-      console.warn(
-        "Submission retained; notification unavailable.",
-        error.message
-      );
+    if (job) {
+      try {
+        await outbox.runJob(job.pk);
+      } catch (error) {
+        console.warn(
+          "Submission retained; notification remains queued.",
+          error.name || "Error"
+        );
+      }
     }
     return json({ reference: record.pk, receivedAt }, 201, origin);
   } catch (error) {

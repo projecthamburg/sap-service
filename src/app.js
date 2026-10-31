@@ -1,7 +1,8 @@
-import { content } from "./content.js";
+import { content, getContent } from "./content.js";
 import { icon, logo } from "./icons.js";
 import {
   escapeHTML as esc,
+  publicContact,
   store,
   installLocalizedValidation,
 } from "./utils.js";
@@ -19,7 +20,6 @@ let language = /^#\/fr\//.test(location.hash)
 if (!["en", "fr"].includes(language)) language = "en";
 let activePage = "";
 let estimator;
-let bookingObserver;
 let bookingTimer;
 let comparisonObserver;
 const photoWidths = {
@@ -39,11 +39,19 @@ const comparisonImages = {
 };
 export const config = {
   apiUrl: "",
+  stage: "proposal",
+  contact: {
+    name: "Project Hamburg",
+    email: "info@projecthamburg.com",
+    phone: null,
+  },
   uploadMode: "multipart",
   bookingUrl: "https://schedule.projecthamburg.com/booking/sap-service-cleanup",
   turnstileSiteKey: "",
 };
 function applyPublicConfig(value) {
+  if (["proposal", "live"].includes(value.stage)) config.stage = value.stage;
+  if (value.contact) config.contact = publicContact(value);
   // Public endpoints only. A compromised config cannot inject markup or javascript: URLs.
   if (
     typeof value.apiUrl === "string" &&
@@ -54,7 +62,7 @@ function applyPublicConfig(value) {
     config.uploadMode = value.uploadMode;
   if (
     typeof value.bookingUrl === "string" &&
-    value.bookingUrl.startsWith("https://schedule.projecthamburg.com/")
+    /^https:\/\/[a-z0-9.-]+(?:\/[^\s]*)?$/.test(value.bookingUrl)
   )
     config.bookingUrl = value.bookingUrl;
   if (
@@ -79,12 +87,15 @@ if (embeddedConfig) {
 }
 
 function header(t) {
+  const contact = publicContact(config);
   return `<a class="skip-link" href="#main">${t.skip}</a>
     <div class="utility-bar"><div class="container"><span>${
       t.top
-    }</span><a href="tel:+15142943063">514 294 3063 ${icon(
-    "diagonal"
-  )}</a><span class="utility-region">${t.territory}</span></div></div>
+    }</span><a href="${esc(contact.primaryHref)}">${esc(
+    contact.phoneDisplay || t.footer.emailUs
+  )} ${icon("diagonal")}</a><span class="utility-region">${
+    t.territory
+  }</span></div></div>
     <header class="site-header"><div class="container nav-inner">
       <a href="#" class="brand" aria-label="SAP Service Inc. ${
         language === "fr" ? "Nettoyage de chantier" : "Construction cleaning"
@@ -119,6 +130,7 @@ function header(t) {
     </div></header>`;
 }
 function footer(t) {
+  const contact = publicContact(config);
   return `<footer class="site-footer"><div class="container"><div class="footer-upper"><div class="footer-brand"><a href="#" class="brand" aria-label="SAP Service Inc.">${logo(
     "brand-lockup",
     "lockup"
@@ -132,9 +144,13 @@ function footer(t) {
     t.book
   }</a></div><div class="footer-contact"><p class="eyebrow">${
     t.footer.contact
-  }</p><a class="footer-phone" href="tel:+15142943063">514 294 3063${icon(
-    "diagonal"
-  )}</a><a href="mailto:servicesapinc@gmail.com">servicesapinc@gmail.com</a><p>Frank Sungwa<br>Montréal, Québec</p><a href="#/${language}/careers" class="footer-careers">${
+  }</p><a class="footer-phone" href="${esc(contact.primaryHref)}">${esc(
+    contact.phoneDisplay || t.footer.emailUs
+  )}${icon("diagonal")}</a><a href="${esc(contact.mailto)}">${esc(
+    contact.email
+  )}</a><p>${esc(
+    contact.name
+  )}<br>Montréal, Québec</p><a href="#/${language}/careers" class="footer-careers">${
     t.footer.careers
   }${icon(
     "arrow"
@@ -144,7 +160,9 @@ function footer(t) {
     t.footer.privacy
   }</a><a href="#/${language}/terms">${t.footer.terms}</a><a href="#">${
     t.footer.top
-  }${icon("diagonal")}</a></div></div></div></footer>`;
+  }${icon("diagonal")}</a></div></div><p class="site-credit">${
+    t.footer.designedBy
+  } <a href="https://projecthamburg.com/" target="_blank" rel="noopener noreferrer">Project Hamburg</a></p></div></footer>`;
 }
 function stageDetails(t, i) {
   const stage = t.services.stages[i];
@@ -174,6 +192,7 @@ function stageDetails(t, i) {
   }</span><span>SAP SERVICE INC.</span></figcaption></figure>`;
 }
 function home(t) {
+  const contact = publicContact(config);
   return `<main id="main" tabindex="-1">
     <section class="hero" id="top"><div class="hero-copy"><p class="eyebrow"><span class="accent-line"></span>${
       t.hero.eyebrow
@@ -289,13 +308,19 @@ function home(t) {
           i + 1
         }</span><div><h3>${title}</h3><p>${copy}</p></div></div>`
     )
-    .join(
-      ""
-    )}</div><a class="person-contact" href="mailto:servicesapinc@gmail.com"><span class="avatar">FS</span><div><strong>${
-    t.approach.signature
-  }</strong><small>${t.approach.role}</small></div>${icon(
-    "diagonal"
-  )}</a></div></div></section>
+    .join("")}</div><a class="person-contact" href="${esc(
+    contact.mailto
+  )}"><span class="avatar">${
+    config.stage === "proposal" ? "PH" : "FS"
+  }</span><div><strong>${
+    config.stage === "proposal" ? esc(contact.name) : t.approach.signature
+  }</strong><small>${
+    config.stage === "proposal"
+      ? language === "fr"
+        ? "Demandes liées à la proposition"
+        : "Proposal enquiries"
+      : t.approach.role
+  }</small></div>${icon("diagonal")}</a></div></div></section>
     <section class="section estimator-section" id="estimate"><div class="container"><div class="section-heading"><div><p class="eyebrow">${
       t.estimator.eyebrow
     }</p><h2>${t.estimator.title}</h2></div><div><p class="section-intro">${
@@ -342,20 +367,26 @@ function home(t) {
   )}</div><h3>${t.booking.meeting}</h3><p>${
     t.booking.meetingCopy
   }</p><div class="booking-facts"><span>${icon("users")}${
-    t.booking.with
+    config.stage === "proposal"
+      ? `${language === "fr" ? "Avec" : "With"} ${esc(contact.name)}`
+      : t.booking.with
   }</span><span>${icon("pin")}${t.booking.location}</span><span>${icon(
     "layers"
   )}${t.trust[1][1]}</span></div><hr><p class="micro-label">${
     t.booking.contact
-  }</p><a class="booking-phone" href="tel:+15142943063">514 294 3063${icon(
-    "diagonal"
-  )}</a><a class="booking-email" href="mailto:servicesapinc@gmail.com">servicesapinc@gmail.com</a></aside><div class="booking-calendar"><div class="calendar-top"><span class="status-dot"></span>${
+  }</p><a class="booking-phone" href="${esc(contact.primaryHref)}">${esc(
+    contact.phoneDisplay || t.footer.emailUs
+  )}${icon("diagonal")}</a><a class="booking-email" href="${esc(
+    contact.mailto
+  )}">${esc(
+    contact.email
+  )}</a></aside><div class="booking-calendar"><div class="calendar-top"><span class="status-dot"></span>${
     t.booking.meeting
   }<span>SAP SERVICE INC.</span></div><div class="calendar-frame"><div class="calendar-loading" role="status"><div class="loading-ring"></div><p>${
     t.booking.loading
   }</p></div><iframe id="booking-frame" title="${
     t.booking.meeting
-  }" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="payment" data-src="${esc(
+  }" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="payment" data-src="${esc(
     config.bookingUrl
   )}"></iframe></div><div class="calendar-fallback"><span>${
     t.booking.fallback
@@ -368,11 +399,11 @@ function home(t) {
   }</p></div></section>
     <section class="section faq-section"><div class="container faq-grid"><div><p class="eyebrow">${
       t.faq.eyebrow
-    }</p><h2>${
-    t.faq.title
-  }</h2><a class="text-link" href="mailto:servicesapinc@gmail.com">${
-    t.footer.contact
-  }${icon("diagonal")}</a></div><div class="faq-list">${t.faq.items
+    }</p><h2>${t.faq.title}</h2><a class="text-link" href="${esc(
+    contact.mailto
+  )}">${t.footer.contact}${icon(
+    "diagonal"
+  )}</a></div><div class="faq-list">${t.faq.items
     .map(
       ([q, a], i) =>
         `<details><summary><span class="faq-index">0${
@@ -425,7 +456,7 @@ function render(force = false) {
   const careerDraft = careerForm ? new FormData(careerForm) : null;
   activePage = page;
   store.set("language", language);
-  const t = content[language];
+  const t = getContent(language, config);
   document.documentElement.lang = t.lang;
   document.title = `SAP Service Inc. — ${
     page === "inbox"
@@ -448,7 +479,6 @@ function render(force = false) {
       : "Specialized construction cleaning from rough clean to final handover. SAP Service Inc., Montréal, serving Québec and Ontario.";
   document.querySelector('meta[property="og:locale"]').content =
     language === "fr" ? "fr_CA" : "en_CA";
-  bookingObserver?.disconnect();
   comparisonObserver?.disconnect();
   clearTimeout(bookingTimer);
   app.innerHTML =
@@ -526,39 +556,25 @@ function comparisonImageURL(key) {
 }
 function mountBooking(t) {
   const iframe = document.getElementById("booking-frame");
-  const mount = () => {
-    iframe.src = iframe.dataset.src;
-    iframe.addEventListener(
-      "load",
-      () => {
-        document.querySelector(".calendar-loading")?.classList.add("loaded");
-        clearTimeout(bookingTimer);
-      },
-      { once: true }
-    );
-    bookingTimer = setTimeout(() => {
-      const loader = document.querySelector(".calendar-loading");
-      if (loader && !loader.classList.contains("loaded")) {
-        loader.innerHTML = `${icon("calendar")}<p>${
-          t.booking.blocked
-        }</p><a class="button primary" target="_blank" rel="noopener noreferrer" href="${esc(
-          config.bookingUrl
-        )}">${t.booking.external}${icon("diagonal")}</a>`;
-      }
-    }, 18000);
-  };
-  if ("IntersectionObserver" in window) {
-    bookingObserver = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          mount();
-          bookingObserver.disconnect();
-        }
-      },
-      { rootMargin: "600px" }
-    );
-    bookingObserver.observe(iframe);
-  } else mount();
+  iframe.addEventListener(
+    "load",
+    () => {
+      document.querySelector(".calendar-loading")?.classList.add("loaded");
+      clearTimeout(bookingTimer);
+    },
+    { once: true }
+  );
+  bookingTimer = setTimeout(() => {
+    const loader = document.querySelector(".calendar-loading");
+    if (loader && !loader.classList.contains("loaded")) {
+      loader.innerHTML = `${icon("calendar")}<p>${
+        t.booking.blocked
+      }</p><a class="button primary" target="_blank" rel="noopener noreferrer" href="${esc(
+        config.bookingUrl
+      )}">${t.booking.external}${icon("diagonal")}</a>`;
+    }
+  }, 18000);
+  iframe.src = iframe.dataset.src;
 }
 app.addEventListener("click", (event) => {
   const target = event.target.closest("button,a");

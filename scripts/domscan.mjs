@@ -38,6 +38,8 @@ for (const file of [
     .map((name) => "src/" + name),
   "index.html",
   "public/site-config.json",
+  "config/operations.json",
+  "scripts/configuration.mjs",
   "public/brand/favicon.svg",
   "public/brand/sap-service.svg",
   "scripts/domscan.mjs",

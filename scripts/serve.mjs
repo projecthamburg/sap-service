@@ -1,4 +1,5 @@
 import http from "node:http";
+import { loadPublicConfiguration, loadOperations, configureDocument } from "./configuration.mjs";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 const root = resolve(process.argv.includes("--dist") ? "dist" : ".");
@@ -13,6 +14,7 @@ const types = {
   ".png": "image/png",
   ".webp": "image/webp",
   ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
   ".txt": "text/plain; charset=utf-8",
   ".xml": "application/xml; charset=utf-8",
 };
@@ -27,7 +29,9 @@ const server = http.createServer(async (req, res) => {
         .some(
           (p) =>
             p.startsWith(".") ||
-            ["appednix", "api", "tests", "scripts", "docs"].includes(p)
+            ["appednix", "api", "tests", "scripts", "docs", "config"].includes(
+              p
+            )
         )
     ) {
       res.writeHead(404);
@@ -37,6 +41,8 @@ const server = http.createServer(async (req, res) => {
     const relative =
       pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
     let target = resolve(root, relative);
+    if (!process.argv.includes("--dist") && relative === "src/pdf-export.js")
+      target = resolve(".local/frontend/pdf-export.js");
     if (!target.startsWith(root + sep)) {
       res.writeHead(403);
       res.end("Forbidden");
@@ -47,7 +53,19 @@ const server = http.createServer(async (req, res) => {
     } catch {
       target = resolve(root, "public", relative);
     }
-    const body = await readFile(target);
+    let body = await readFile(target);
+    if (!process.argv.includes("--dist") && relative === "index.html")
+      body = Buffer.from(
+        configureDocument(body.toString(), await loadOperations())
+          .replace(
+            "</head>",
+            `<script type="application/json" id="site-config">${JSON.stringify(
+              await loadPublicConfiguration()
+            ).replaceAll("<", "\\u003c")}</script></head>`
+          )
+      );
+    if (!process.argv.includes("--dist") && relative === "site-config.json")
+      body = Buffer.from(JSON.stringify(await loadPublicConfiguration()));
     res.writeHead(200, {
       "Content-Type": types[extname(target)] || "application/octet-stream",
       "Cache-Control": "no-store",

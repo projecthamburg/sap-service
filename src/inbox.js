@@ -34,6 +34,9 @@ const copy = {
     consent: "Consent recorded",
     yes: "Yes",
     sample: "Test submission",
+    loadMore: "Load older submissions",
+    notification: "Operator email",
+    emailStates: { queued:"Queued", sending:"Sending", retrying:"Retry scheduled", sent:"Accepted by email provider", failed:"Needs operator attention", suppressed:"Suppressed for test", disabled:"Disabled" },
   },
   fr: {
     title: "Boîte de réception privée",
@@ -67,6 +70,9 @@ const copy = {
     consent: "Consentement enregistré",
     yes: "Oui",
     sample: "Demande de test",
+    loadMore: "Charger les demandes précédentes",
+    notification: "Courriel à l’opérateur",
+    emailStates: { queued:"En attente", sending:"En cours", retrying:"Nouvel essai prévu", sent:"Accepté par le fournisseur", failed:"Vérification requise", suppressed:"Désactivé pour le test", disabled:"Désactivé" },
   },
 };
 let accessKey = "";
@@ -172,9 +178,13 @@ export function mountInbox(root, language, config, all) {
       payload.notes || payload.cover || ""
     )}</p>`;
   }
-  async function load() {
+  let records = [], cursor = null;
+  async function load(append = false) {
     try {
-      const data = await request("/admin/submissions");
+      const data = await request("/admin/submissions" + (append && cursor ? "?cursor=" + encodeURIComponent(cursor) : ""));
+      records = append ? [...records, ...data.submissions].filter((r,i,a) => a.findIndex(other=>other.pk===r.pk)===i) : data.submissions;
+      cursor = data.nextCursor;
+      data.submissions = records;
       content.innerHTML = `<div class="inbox-toolbar"><span>${
         data.submissions.length
       } ${
@@ -203,7 +213,7 @@ export function mountInbox(root, language, config, all) {
                   contact.company ? ` · ${esc(contact.company)}` : ""
                 }</p><small>${t.receipt}: ${new Date(
                   record.receivedAt || record.createdAt
-                ).toLocaleString(all.lang)}</small><details><summary>${
+                ).toLocaleString(all.lang)}</small><p class="fine-print">${t.notification}: ${esc(t.emailStates[record.notification?.status] || record.notification?.status || "—")}${record.notification?.attempts ? ` · ${record.notification.attempts} ${language === "fr" ? "essai(s)" : "attempt(s)"}` : ""}</p><details><summary>${
                   t.more
                 }${icon("plus")}</summary>${details(record)}</details>${
                   record.files.length
@@ -226,8 +236,10 @@ export function mountInbox(root, language, config, all) {
               })
               .join("")
           : `<p class="inbox-empty">${t.empty}</p>`
-      }</div><p class="fine-print">${t.hint}</p>`;
-      content.querySelector('[data-inbox="refresh"]').onclick = load;
+      }</div>${cursor ? `<button type="button" class="button secondary" data-inbox="more">${t.loadMore}</button>` : ""}<p class="fine-print">${t.hint}</p>`;
+      content.querySelector('[data-inbox="refresh"]').onclick = () => load();
+      const more = content.querySelector('[data-inbox="more"]');
+      if (more) more.onclick = () => {more.disabled = true; load(true);};
       content.querySelector('[data-inbox="logout"]').onclick = () => {
         accessKey = "";
         login();

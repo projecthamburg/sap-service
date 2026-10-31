@@ -5,5 +5,6 @@
   "bucket": "sap-service-private-536955747256-ca-central-1",
   "executionRoleArn": "arn:aws:iam::536955747256:role/sap-service-api-execution",
   "deployRoleArn": "arn:aws:iam::536955747256:role/sap-service-github-deploy",
-  "apiUrl": "https://nh3oo4scqlpl4iclycmdpszwgm0opafv.lambda-url.ca-central-1.on.aws"
+  "apiUrl": "https://nh3oo4scqlpl4iclycmdpszwgm0opafv.lambda-url.ca-central-1.on.aws",
+  "notificationScheduleArn": "arn:aws:events:ca-central-1:536955747256:rule/sap-service-email-outbox"
 }

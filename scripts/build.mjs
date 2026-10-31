@@ -8,13 +8,20 @@ import {
   readdir,
 } from "node:fs/promises";
 import { resolve } from "node:path";
+import { buildPDF } from "./build-pdf.mjs";
 import { createHash } from "node:crypto";
+import { loadPublicConfiguration, loadOperations, configureDocument } from "./configuration.mjs";
+const publicConfig =
+  JSON.stringify(await loadPublicConfiguration(), null, 2) + "\n";
+const operations = await loadOperations();
 const out = resolve("dist");
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 await cp("public", out, { recursive: true });
+await writeFile(resolve(out, "site-config.json"), publicConfig);
 await cp("src", resolve(out, "src"), { recursive: true });
 await copyFile("index.html", resolve(out, "index.html"));
+await buildPDF();
 // Version every browser module and the public configuration together. This prevents
 // an older cached form module from being mixed with a newly deployed service API.
 const browserFiles = (await readdir("src"))
@@ -23,8 +30,9 @@ const browserFiles = (await readdir("src"))
 const releaseHash = createHash("sha256");
 for (const name of browserFiles)
   releaseHash.update(await readFile(resolve("src", name)));
-releaseHash.update(await readFile("public/site-config.json"));
+releaseHash.update(publicConfig);
 releaseHash.update(await readFile("index.html"));
+releaseHash.update(await readFile("package-lock.json"));
 const release = releaseHash.digest("hex").slice(0, 12);
 for (const name of browserFiles.filter((name) => name.endsWith(".js"))) {
   let code = await readFile(resolve(out, "src", name), "utf8");
@@ -33,21 +41,23 @@ for (const name of browserFiles.filter((name) => name.endsWith(".js"))) {
     (_, quote, specifier) => `from ${quote}${specifier}?v=${release}${quote}`
   );
   code = code.replace(
+    /import\((["'])(\.\/[^"']+\.js)\1\)/g,
+    (_, quote, specifier) => `import(${quote}${specifier}?v=${release}${quote})`
+  );
+  code = code.replace(
     'fetch("./site-config.json")',
     `fetch("./site-config.json?v=${release}")`
   );
   await writeFile(resolve(out, "src", name), code);
 }
-let index = await readFile(resolve(out, "index.html"), "utf8");
+let index = configureDocument(await readFile(resolve(out, "index.html"), "utf8"), operations);
 index = index
   .replace('./src/styles.css"', `./src/styles.css?v=${release}"`)
   .replace('./src/app.js"', `./src/app.js?v=${release}"`)
   .replace('href="./src/brand.js"', `href="./src/brand.js?v=${release}"`)
   .replace(
     "</head>",
-    `<script type="application/json" id="site-config">${(
-      await readFile("public/site-config.json", "utf8")
-    ).replaceAll(
+    `<script type="application/json" id="site-config">${publicConfig.replaceAll(
       "<",
       "\\u003c"
     )}</script><meta name="sap-build" content="${release}"></head>`
@@ -56,8 +66,7 @@ await writeFile(resolve(out, "index.html"), index);
 await writeFile(resolve(out, ".nojekyll"), "");
 // Hash routes work both at a domain root and a GitHub Pages repository subpath.
 await copyFile(resolve(out, "index.html"), resolve(out, "404.html"));
-const base =
-  process.env.SAP_SITE_URL || "https://projecthamburg.github.io/sap-service/";
+const base = process.env.SAP_SITE_URL || operations.siteUrl;
 await writeFile(
   resolve(out, "robots.txt"),
   `User-agent: *\nAllow: /\nSitemap: ${base}sitemap.xml\n`

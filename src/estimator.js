@@ -1,4 +1,9 @@
-import { content } from "./content.js";
+import {
+  measurementWarnings,
+  measurementFingerprint,
+  measurementWarningText,
+} from "./measurement-checks.js";
+import { content, getContent } from "./content.js";
 import { icon, logo } from "./icons.js";
 import { estimate, PRICING, fromSqFt } from "./pricing.js";
 import {
@@ -40,8 +45,8 @@ export class Estimator {
   mount(root, language) {
     this.root = root;
     this.language = language;
-    this.t = content[language].estimator;
-    this.all = content[language];
+    this.t = getContent(language, this.config).estimator;
+    this.all = getContent(language, this.config);
     this.update();
     root.addEventListener("click", (event) => this.onClick(event));
     root.addEventListener("change", (event) => this.onChange(event));
@@ -101,6 +106,10 @@ export class Estimator {
     } ${String(s.step + 1).padStart(2, "0")} <span>/ ${
       t.of
     } 06</span></div><form id="estimate-form" novalidate>${this.stepContent()}${
+      s.step === 2
+        ? `<div id="measurement-checks">${this.measurementChecks()}</div>`
+        : ""
+    }${
       this.error
         ? `<div class="form-error" id="estimate-error" role="alert">${icon(
             "info"
@@ -133,6 +142,35 @@ export class Estimator {
   }
   heading(title, copy) {
     return `<h3 class="step-heading" tabindex="-1">${title}</h3><p class="step-copy">${copy}</p>`;
+  }
+  measurementChecks() {
+    const warnings = measurementWarnings(this.state),
+      fr = this.language === "fr";
+    if (!warnings.length) return "";
+    return `<aside class="measurement-warning" aria-labelledby="measurement-warning-title"><h4 id="measurement-warning-title">${
+      fr ? "Vérifions les mesures" : "Let’s check the measurements"
+    }</h4><p>${
+      fr
+        ? "Les dimensions inhabituelles peuvent être correctes. Aucune valeur ne sera modifiée automatiquement."
+        : "Unusual sizes can be valid. No value will be changed automatically."
+    }</p><ul>${warnings
+      .map(
+        (w) =>
+          `<li>${esc(
+            measurementWarningText(w, this.language, this.state.unit)
+          )}</li>`
+      )
+      .join(
+        ""
+      )}</ul><label class="checkbox-row"><input type="checkbox" name="measurementConfirmation" ${
+      this.state.measurementConfirmation === measurementFingerprint(this.state)
+        ? "checked"
+        : ""
+    }><span>${
+      fr
+        ? "J’ai vérifié les unités, la portée et les mesures saisies; elles sont correctes."
+        : "I checked the units, scope and measurements entered; they are correct."
+    }</span></label></aside>`;
   }
   stepContent() {
     const s = this.state,
@@ -610,6 +648,15 @@ export class Estimator {
       return;
     }
     if (!el.name) return;
+    if (el.name === "measurementConfirmation") {
+      this.state.measurementConfirmation = el.checked
+        ? measurementFingerprint(this.state)
+        : "";
+      this.error = null;
+      this.root.querySelector(".form-error")?.remove();
+      this.refreshSummary(false);
+      return;
+    }
     this.readField(el);
     if (el.name.endsWith(".measurement")) this.update();
     else this.refreshSummary();
@@ -648,7 +695,11 @@ export class Estimator {
     else if (Object.hasOwn(s, name) && typeof s[name] === "string")
       s[name] = el.value;
   }
-  refreshSummary() {
+  refreshSummary(updateChecks = true) {
+    if (updateChecks) {
+      const checks = this.root.querySelector("#measurement-checks");
+      if (checks) checks.innerHTML = this.measurementChecks();
+    }
     this.result = null;
     try {
       if (!validateStep(this.state, 1) && !validateStep(this.state, 2))
@@ -656,7 +707,7 @@ export class Estimator {
     } catch {}
     this.root.querySelector(".estimate-summary").innerHTML = this.summary();
   }
-  onClick(event) {
+  async onClick(event) {
     const b = event.target.closest("button");
     if (!b) return;
     const s = this.state,
@@ -735,9 +786,35 @@ export class Estimator {
       case "quote":
         openQuote(this);
         break;
-      case "print":
-        this.print();
+      case "print": {
+        const snapshot = {
+          ...structuredClone(this.exportData()),
+          config: structuredClone(this.config),
+          files: this.files.map((f) => ({
+            name: f.name,
+            size: f.size,
+            type: f.type,
+          })),
+        };
+        const original = b.innerHTML;
+        b.disabled = true;
+        b.textContent =
+          this.language === "fr" ? "Préparation du PDF…" : "Preparing PDF…";
+        try {
+          const { downloadEstimatePDF } = await import("./pdf-export.js");
+          await downloadEstimatePDF(snapshot);
+        } catch (error) {
+          toast(
+            this.language === "fr"
+              ? "Le PDF n’a pas pu être créé. Vérifiez votre connexion et réessayez."
+              : "The PDF could not be created. Check your connection and try again."
+          );
+        } finally {
+          b.disabled = false;
+          b.innerHTML = original;
+        }
         break;
+      }
       case "export":
         downloadFile(
           "sap-estimate.json",
@@ -828,9 +905,9 @@ export class Estimator {
     if (!r) return;
     const printRoot = document.createElement("section");
     printRoot.id = "print-estimate";
-    printRoot.innerHTML = `${logo()}<h1>SAP SERVICE INC.</h1><p>Montréal · 514 294 3063 · servicesapinc@gmail.com</p><hr><h2>${
-      t.range
-    }</h2><p>${esc(s.name)} · ${esc(s.city)} · ${
+    printRoot.innerHTML = `${logo()}<h1>SAP SERVICE INC.</h1><p>Montréal · ${esc(
+      this.config.contact?.email || "info@projecthamburg.com"
+    )}</p><hr><h2>${t.range}</h2><p>${esc(s.name)} · ${esc(s.city)} · ${
       s.province
     }</p><p>${new Date().toLocaleDateString(this.all.lang)}</p><h2>${money(
       r.low,
