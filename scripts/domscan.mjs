@@ -39,6 +39,9 @@ for (const file of [
   "src/estimator.js",
   "public/brand/favicon.svg",
   "public/brand/sap-service.svg",
+  "scripts/domscan.mjs",
+  "scripts/evidence/dom-capture.mjs",
+  "scripts/evidence/brand-reference.mjs",
 ])
   manifest.source.push({
     path: file,
@@ -146,6 +149,10 @@ try {
         await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
         const brand = await compareBrandReference(page);
         await page.screenshot({ path: resolve(output, name + "-brand.png") });
+        await page.screenshot({
+          path: resolve(output, name + "-page.png"),
+          fullPage: true,
+        });
         if (
           before.coverage.truncated ||
           after.coverage.truncated ||
@@ -168,6 +175,7 @@ try {
             name + "-before.png",
             name + "-after.png",
             name + "-brand.png",
+            name + "-page.png",
           ],
         });
         console.log(
