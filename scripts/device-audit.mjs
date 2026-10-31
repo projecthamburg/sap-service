@@ -522,15 +522,20 @@ for (const device of matrix) {
         })
       ).value;
       await request(`/session/${id}/frame`, { id: frameElement });
-      await until("return document.body.innerText.length>80;");
-      check(
-        "Embedded calendar renders",
-        await execute(
-          'return document.body.innerText.includes("SAP Service Inc.");'
-        )
-      );
+      try {
+        await until("return document.body.innerText.length>80;");
+        check(
+          "Embedded calendar renders",
+          await execute(
+            'return document.body.innerText.includes("SAP Service Inc.");'
+          )
+        );
+      } finally {
+        await request(`/session/${id}/frame`, { id: null });
+      }
+      // Firefox's screenshot driver cannot inspect a cross-origin parent's
+      // scroll offsets from frame context. Capture from the top-level page.
       await capture("calendar");
-      await request(`/session/${id}/frame`, { id: null });
     }
     const passed = results.every((x) => x.passed);
     await execute(

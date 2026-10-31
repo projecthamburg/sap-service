@@ -1,6 +1,6 @@
 import puppeteer from "puppeteer-core";
 import { existsSync } from "node:fs";
-import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { captureDOM, diffCaptures } from "./evidence/dom-capture.mjs";
@@ -32,16 +32,19 @@ const manifest = {
   ],
 };
 for (const file of [
-  "src/brand.js",
-  "src/icons.js",
-  "src/app.js",
-  "src/styles.css",
-  "src/estimator.js",
+  ...(await readdir("src"))
+    .filter((name) => /\.(?:js|css)$/.test(name))
+    .sort()
+    .map((name) => "src/" + name),
+  "index.html",
+  "public/site-config.json",
   "public/brand/favicon.svg",
   "public/brand/sap-service.svg",
   "scripts/domscan.mjs",
   "scripts/evidence/dom-capture.mjs",
   "scripts/evidence/brand-reference.mjs",
+  "tests/fixtures/sap-logo-reference.json",
+  "tests/fixtures/sap-logo-source.jpg",
 ])
   manifest.source.push({
     path: file,
