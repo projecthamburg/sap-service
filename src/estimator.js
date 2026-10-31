@@ -1,3 +1,5 @@
+import {planScopeFingerprint} from "./plan-geometry.js";
+import { contextCopy, discoveryFields, budgetFitText } from "./client-context.js";
 import {
   measurementWarnings,
   measurementFingerprint,
@@ -175,6 +177,7 @@ export class Estimator {
   stepContent() {
     const s = this.state,
       t = this.t,
+      context = contextCopy(this.language),
       unit = s.unit === "m2" ? "m²" : this.language === "fr" ? "pi²" : "sq ft";
     if (s.step === 0)
       return `${this.heading(
@@ -227,7 +230,7 @@ export class Estimator {
         type: "date",
       })}</div><label class="checkbox-row"><input type="checkbox" name="occupied" ${
         s.occupied ? "checked" : ""
-      }><span>${t.occupied}</span></label>`;
+      }><span>${t.occupied}</span></label><div class="form-grid">${field(context.budget,"budget",s.budget || "",{type:"number",min:0,max:10000000,step:"any",full:true})}${field(context.referredBy,"referredBy",s.referredBy,{full:true})}</div><p class="field-help">${context.budgetHelp}</p>`;
     if (s.step === 1)
       return `${this.heading(
         t.scopeTitle,
@@ -367,7 +370,7 @@ export class Estimator {
       return `${this.heading(
         t.filesTitle,
         t.filesCopy
-      )}<label class="dropzone"><input type="file" name="projectFiles" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">${icon(
+      )}<div class="discovery-fields"><h4>${context.title}</h4><p class="field-help">${context.intro}</p>${discoveryFields.map(key=>`<label class="field"><span>${context[key]}</span><textarea name="${key}" rows="3" maxlength="2000">${esc(s[key])}</textarea><small class="field-help">${context[key+"Help"]}</small></label>`).join("")}</div><label class="dropzone"><input type="file" name="projectFiles" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">${icon(
         "upload"
       )}<strong>${t.drop}</strong><span>${
         t.fileTypes
@@ -397,7 +400,7 @@ export class Estimator {
         t.sample
       }${icon("arrow")}</button></div></div><p class="fine-print">${
         t.noExtraction
-      }</p>`;
+      }</p>${this.config.planReviewEnabled ? `<div class="plan-review-entry"><button type="button" class="button outline" data-est="plan-review">${this.language==="fr"?"Vérifier un plan (facultatif)":"Review a floor plan (optional)"}</button>${this.planReview?`<p class="fine-print">${esc(this.planReview.audit.reference)} · ${this.language==="fr"?"Données vérifiées conservées":"Reviewed evidence kept"}</p>`:""}<div id="plan-review-workspace"></div></div>`:""}`;
     return this.results();
   }
   roomCard(r, i) {
@@ -597,7 +600,7 @@ export class Estimator {
       t.exclusionText
     }</p></details><p class="result-disclaimer">${
       t.disclaimer
-    }</p><div class="result-actions"><button type="button" class="button primary" data-est="quote">${
+    }</p>${s.budget>0 ? `<div class="budget-fit"><strong>${contextCopy(this.language).budget}: ${money(s.budget,this.language)}</strong><p>${budgetFitText(s.budget,r,this.language)}</p></div>` : ""}<div class="result-actions"><button type="button" class="button primary" data-est="quote">${
       t.request
     }${icon(
       "diagonal"
@@ -688,7 +691,7 @@ export class Estimator {
     if (["area", "gross", "common", "glazing"].includes(name))
       s[name] = parseArea(el.value, s.unit);
     else if (
-      ["floors", "units", "washrooms", "kitchens", "visits"].includes(name)
+      ["budget", "floors", "units", "washrooms", "kitchens", "visits"].includes(name)
     )
       s[name] = Math.max(0, Number(el.value) || 0);
     else if (name === "occupied") s.occupied = el.checked;
@@ -743,7 +746,8 @@ export class Estimator {
       this.update();
     }
     if (b.dataset.removeFile !== undefined) {
-      this.files.splice(Number(b.dataset.removeFile), 1);
+      const removed=this.files.splice(Number(b.dataset.removeFile), 1)[0];
+      if(removed?.name===this.planReview?.audit.source.name){this.planReview=null;this.planWorkspace?.dispose();this.planWorkspace=null;}
       this.update();
     }
     switch (b.dataset.est) {
@@ -783,6 +787,12 @@ export class Estimator {
           toast(t.noneSaved);
         }
         break;
+      case "plan-review": {
+        const module=await import("./plan-review.js");
+        if(!this.planWorkspace)this.planWorkspace=module.createPlanReview({files:()=>this.files,getScope:()=>this.state,config:this.config,language:this.language,onConfirm:value=>{this.planReview=value;}});
+        this.planWorkspace.mount(this.root.querySelector("#plan-review-workspace"));
+        break;
+      }
       case "quote":
         openQuote(this);
         break;
@@ -873,6 +883,9 @@ export class Estimator {
           ?.scrollIntoView({ block: "center" });
       return;
     }
+    if(this.state.step===4 && this.planReview && this.planReview.proof.scopeFingerprint!==planScopeFingerprint(this.state)) {
+      toast(this.language==="fr"?"Les mesures ont changé. Rouvrez la vérification du plan et confirmez les données actuelles.":"Measurements changed. Reopen the plan review and confirm the current readings.");return;
+    }
     if (this.state.step === 4) {
       for (let i = 0; i < 4; i++) {
         const error = validateStep(this.state, i);
@@ -894,6 +907,7 @@ export class Estimator {
       generatedAt: new Date().toISOString(),
       language: this.language,
       scope: { ...this.state },
+      ...(this.planReview ? {planReview:this.planReview.audit} : {}),
       estimate: this.result,
       disclaimer: this.t.demo + " " + this.t.disclaimer,
     };

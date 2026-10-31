@@ -50,6 +50,8 @@ export const config = {
   turnstileSiteKey: "",
 };
 function applyPublicConfig(value) {
+  config.planReviewEnabled = value.planReviewEnabled === true && /^https:\/\/[a-z0-9.-]+(?:\/[^\s]*)?$/.test(value.planReviewApiUrl||"");
+  if(config.planReviewEnabled)config.planReviewApiUrl=value.planReviewApiUrl.replace(/\/$/,"");
   if (["proposal", "live"].includes(value.stage)) config.stage = value.stage;
   if (value.contact) config.contact = publicContact(value);
   // Public endpoints only. A compromised config cannot inject markup or javascript: URLs.

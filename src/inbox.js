@@ -1,3 +1,4 @@
+import {contextCopy,discoveryFields} from "./client-context.js";
 import { icon } from "./icons.js";
 import { escapeHTML as esc, money } from "./utils.js";
 
@@ -128,6 +129,11 @@ export function mountInbox(root, language, config, all) {
     if (record.kind === "quote") {
       const scope = payload.estimate.scope,
         result = payload.estimate.estimate;
+      if(payload.estimate.planReview){const review=payload.estimate.planReview;rows.push([language==="fr"?"Vérification du plan":"Plan review",`${review.reference} · ${review.reviewedTileCount}/${review.tiles.length} · ${review.requiresClarification?(language==="fr"?"À clarifier":"Clarification needed"):(language==="fr"?"Vérifié par le visiteur":"Visitor reviewed")}`]);for(const d of review.decisions||[])rows.push([d.conflictId,`${d.resolution}: ${d.reason}`]);}
+      const discovery=contextCopy(language);
+      if(scope.budget>0)rows.push([discovery.budget,money(scope.budget,language)+" CAD"]);
+      if(scope.referredBy)rows.push([discovery.referredBy,scope.referredBy]);
+      for(const key of discoveryFields)if(scope[key])rows.push([discovery[key],scope[key]]);
       rows.push(
         [all.estimator.city, `${scope.city}, ${scope.province}`],
         [t.area, `${result.totalSqFt} sq ft`],

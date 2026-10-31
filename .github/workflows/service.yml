@@ -30,6 +30,7 @@ jobs:
           SAP_ADMIN_TOKEN: ${{ secrets.SAP_ADMIN_TOKEN }}
           SAP_RATE_SALT: ${{ secrets.SAP_RATE_SALT }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.SAP_PLAN_OPENAI_KEY }}
       - name: Retain the verified public endpoint
         run: |
           git config user.name "github-actions[bot]"

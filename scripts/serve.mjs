@@ -7,6 +7,8 @@ const port = Number(process.env.PORT || 4173);
 const types = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".wasm": "application/wasm",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
@@ -41,8 +43,11 @@ const server = http.createServer(async (req, res) => {
     const relative =
       pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
     let target = resolve(root, relative);
-    if (!process.argv.includes("--dist") && relative === "src/pdf-export.js")
-      target = resolve(".local/frontend/pdf-export.js");
+    if (!process.argv.includes("--dist") && ["src/pdf-export.js","src/plan-review.js"].includes(relative))
+      target = resolve(".local/frontend", relative.slice(4));
+    if (!process.argv.includes("--dist") && /^vendor\/pdfjs\/(?:pdf\.worker\.min\.mjs|(?:standard_fonts|cmaps|wasm)\/[a-zA-Z0-9_.-]+)$/.test(relative)) {
+      target=resolve("node_modules/pdfjs-dist",relative.replace("vendor/pdfjs/", "").replace("pdf.worker.min.mjs","build/pdf.worker.min.mjs"));
+    }
     if (!target.startsWith(root + sep)) {
       res.writeHead(403);
       res.end("Forbidden");

@@ -8,6 +8,7 @@ import {
   readdir,
 } from "node:fs/promises";
 import { resolve } from "node:path";
+import {buildPlan} from "./build-plan.mjs";
 import { buildPDF } from "./build-pdf.mjs";
 import { createHash } from "node:crypto";
 import { loadPublicConfiguration, loadOperations, configureDocument } from "./configuration.mjs";
@@ -22,6 +23,7 @@ await writeFile(resolve(out, "site-config.json"), publicConfig);
 await cp("src", resolve(out, "src"), { recursive: true });
 await copyFile("index.html", resolve(out, "index.html"));
 await buildPDF();
+await buildPlan();
 // Version every browser module and the public configuration together. This prevents
 // an older cached form module from being mixed with a newly deployed service API.
 const browserFiles = (await readdir("src"))

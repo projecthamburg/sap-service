@@ -34,6 +34,11 @@ export function notificationEmail(record) {
               payload.estimate.estimate.high
             )} (not a quotation)`,
           ],
+          ["Target cleaning budget (CAD, before tax)", payload.estimate.scope.budget || "Not specified"],
+          ["Referred by", payload.estimate.scope.referredBy || "—"],
+          ["Expectations and ideas", payload.estimate.scope.expectations || "—"],
+          ["Concerns and constraints", payload.estimate.scope.concerns || "—"],
+          ["Other information", payload.estimate.scope.additionalInfo || "—"],
           ["Notes", payload.notes || "—"],
         ]
       : [

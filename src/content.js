@@ -645,6 +645,7 @@ export const content = {
       privacyTitle: "Privacy notice",
       termsTitle: "Estimate terms",
       privacy: [
+        ["Optional AI plan review", "Only if you explicitly opt in, the selected plan page is rendered into overlapping image tiles and sent through private AWS storage to OpenAI for reading printed information. Other pages and files are not sent for that review. Review tiles and the anonymous review job expire after 7 days; processing may occur outside Canada under the provider’s API data policies. A review attached to a submitted enquiry is retained with that enquiry for 90 days. AI readings can be wrong and require your review; they do not automatically change estimate inputs."],
         [
           "Who to contact",
           "This SAP Service Inc. proposal is operated by {operatorName}. Until an agreed handover, enquiries, uploads and recruitment submissions are managed by {operatorName}. For access, correction or deletion requests, contact {contactEmail}.",
@@ -1340,6 +1341,7 @@ export const content = {
       privacyTitle: "Avis de confidentialité",
       termsTitle: "Modalités d’estimation",
       privacy: [
+        ["Vérification facultative du plan par IA", "Uniquement avec votre consentement explicite, la page choisie est divisée en tuiles avec recouvrement et transmise, via le stockage privé AWS, à OpenAI pour lire les données imprimées. Les autres pages et fichiers ne sont pas transmis pour cette analyse. Les tuiles et le dossier anonyme expirent après 7 jours; le traitement peut avoir lieu hors du Canada selon les politiques API du fournisseur. Une analyse jointe à une demande est conservée avec celle-ci pendant 90 jours. Les lectures peuvent être erronées et doivent être vérifiées; elles ne modifient jamais automatiquement les saisies du calculateur."],
         [
           "Personne-ressource",
           "Cette proposition pour SAP Service Inc. est exploitée par {operatorName}. Jusqu’au transfert convenu, {operatorName} gère les demandes, fichiers et candidatures. Pour un accès, une rectification ou une suppression, écrivez à {contactEmail}.",

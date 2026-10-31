@@ -229,6 +229,7 @@ if (!existingOnly) {
             Expiration: { Days: 90 },
             AbortIncompleteMultipartUpload: { DaysAfterInitiation: 1 },
           },
+          { ID:"Expire-plan-review-tiles",Status:"Enabled",Filter:{Prefix:"submissions/reviews/"},Expiration:{Days:7} },
         ],
       },
     })
@@ -384,7 +385,7 @@ if (exists) {
       Runtime: "nodejs22.x",
       Handler: "index.handler",
       MemorySize: 256,
-      Timeout: 120,
+      Timeout: 30,
       Environment: { Variables: variables },
     })
   );
@@ -404,7 +405,7 @@ if (exists) {
           Handler: "index.handler",
           Architectures: ["arm64"],
           MemorySize: 256,
-          Timeout: 120,
+          Timeout: 30,
           Code: { ZipFile: zip },
           Environment: { Variables: variables },
           Description: "SAP Service private quotation and careers submissions",
@@ -525,7 +526,7 @@ if (!existingOnly) {
             "lambda:UpdateFunctionConfiguration",
             "lambda:GetFunctionUrlConfig",
           ],
-          Resource: `arn:aws:lambda:${region}:${account}:function:${functionName}`,
+          Resource: [functionName,"sap-service-plan-review"].map(name=>`arn:aws:lambda:${region}:${account}:function:${name}`),
         },
         {
           Effect: "Allow",
@@ -582,6 +583,31 @@ if (!existingOnly) {
   if (targets.FailedEntryCount)
     throw Error("Could not connect SAP email retry schedule.");
 }
+// Long vision requests have their own function/concurrency; intake and email
+// receipts retain their shorter timeout and independent capacity.
+const planFunctionName="sap-service-plan-review";
+const planVariables={...variables,SERVICE_MODE:"plan-review"};
+let planExists=true;
+try{await lambda.send(new GetFunctionConfigurationCommand({FunctionName:planFunctionName}));}catch(e){if(e.name!=="ResourceNotFoundException")throw e;planExists=false;}
+if(planExists){
+  await lambda.send(new UpdateFunctionCodeCommand({FunctionName:planFunctionName,ZipFile:zip}));
+  await waitUntilFunctionUpdatedV2({client:lambda,maxWaitTime:180},{FunctionName:planFunctionName});
+  await lambda.send(new UpdateFunctionConfigurationCommand({FunctionName:planFunctionName,Role:executionRoleArn,Runtime:"nodejs22.x",Handler:"index.handler",MemorySize:256,Timeout:120,Environment:{Variables:planVariables}}));
+  await waitUntilFunctionUpdatedV2({client:lambda,maxWaitTime:180},{FunctionName:planFunctionName});
+}else{
+  if(existingOnly)throw Error("Plan-review function requires initial provisioning before CI deployment.");
+  await lambda.send(new CreateFunctionCommand({FunctionName:planFunctionName,Role:executionRoleArn,Runtime:"nodejs22.x",Handler:"index.handler",Architectures:["arm64"],MemorySize:256,Timeout:120,Code:{ZipFile:zip},Environment:{Variables:planVariables},Description:"Isolated SAP optional floor-plan review"}));
+  await waitUntilFunctionActiveV2({client:lambda,maxWaitTime:180},{FunctionName:planFunctionName});
+}
+let planUrl;
+try{planUrl=(await lambda.send(new GetFunctionUrlConfigCommand({FunctionName:planFunctionName}))).FunctionUrl;}catch(e){if(e.name!=="ResourceNotFoundException")throw e;planUrl=(await lambda.send(new CreateFunctionUrlConfigCommand({FunctionName:planFunctionName,AuthType:"NONE"}))).FunctionUrl;}
+if(!existingOnly){
+  for(const permission of [{StatementId:"SAPPlanUrl",Action:"lambda:InvokeFunctionUrl",FunctionUrlAuthType:"NONE"},{StatementId:"SAPPlanInvocation",Action:"lambda:InvokeFunction",InvokedViaFunctionUrl:true}])try{await lambda.send(new AddPermissionCommand({FunctionName:planFunctionName,Principal:"*",...permission}));}catch(e){if(e.name!=="ResourceConflictException")throw e;}
+  await lambda.send(new PutFunctionConcurrencyCommand({FunctionName:planFunctionName,ReservedConcurrentExecutions:2}));
+}
+const planReviewApiUrl=planUrl.replace(/\/$/, "");
+const planHealthResponse=await fetch(planReviewApiUrl+"/health",{signal:AbortSignal.timeout(20000)}),planHealth=await planHealthResponse.json();
+if(!planHealthResponse.ok||!planHealth.planReview?.enabled)throw Error("Plan-review service is not configured.");
 const apiUrl = functionUrl.replace(/\/$/, "");
 const response = await fetch(`${apiUrl}/health`, {
   signal: AbortSignal.timeout(20000),
@@ -592,6 +618,8 @@ if (!response.ok || !health.forms)
 const config = JSON.parse(await readFile("public/site-config.json", "utf8"));
 config.apiUrl = apiUrl;
 config.uploadMode = "direct";
+config.planReviewEnabled = Boolean(process.env.OPENAI_API_KEY);
+config.planReviewApiUrl = planReviewApiUrl;
 await writeFile(
   "public/site-config.json",
   JSON.stringify(config, null, 2) + "\n"
@@ -608,6 +636,8 @@ await writeFile(
       deployRoleArn,
       apiUrl,
       notificationScheduleArn,
+      planFunctionName,
+      planReviewApiUrl,
     },
     null,
     2

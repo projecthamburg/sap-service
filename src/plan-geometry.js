@@ -1,6 +1,6 @@
 // Versioned geometry and reconciliation contract. It never changes price inputs.
 export const PLAN_PROTOCOL = 'sap-plan-review-v1';
-export const PLAN_LIMITS = {core:1280,padding:128,maxTiles:64,maxPixels:64000000,maxSide:16000,batchSize:8,relativeTolerance:0.05,absoluteToleranceSqFt:2};
+export const PLAN_LIMITS = {core:1280,padding:128,maxTiles:64,maxPixels:64000000,maxSide:16000,batchSize:4,relativeTolerance:0.05,absoluteToleranceSqFt:2};
 export function planTiles(width,height,{core=PLAN_LIMITS.core,padding=PLAN_LIMITS.padding}={}) {
  if(!Number.isSafeInteger(width)||!Number.isSafeInteger(height)||width<1||height<1||width>PLAN_LIMITS.maxSide||height>PLAN_LIMITS.maxSide||width*height>PLAN_LIMITS.maxPixels||!Number.isSafeInteger(core)||core<64||!Number.isSafeInteger(padding)||padding<0||padding>core/2)throw new RangeError('Plan resolution exceeds the review limit.');
  const tiles=[];
@@ -54,8 +54,10 @@ export function discrepancy(entered,observed){
  const ratio=entered/observed,near=n=>Math.abs(ratio-n)/n<.06;
  return{enteredSqFt:entered,planSqFt:observed,differenceSqFt:entered-observed,code:near(10)||near(.1)||near(100)||near(.01)?'possible-zero':near(10.7639104)||near(.09290304)?'possible-unit':'area-mismatch'};
 }
-export function comparePlanScope(claims,scope,{wholeProject=false,links={}}={}){
+export function comparePlanScope(claims,scope,{wholeProject=false,links={},geometryWarnings=0}={}){
  const conflicts=[],matches=[],rooms=claims.filter(c=>c.kind==='room'),used=new Set();
+ if(!rooms.length)conflicts.push({id:'no-plan-rooms',code:'no-rooms-recognized',label:'Plan'});
+ if(geometryWarnings)conflicts.push({id:'geometry-warnings',code:'discarded-plan-evidence',label:'Plan'});
  for(const claim of rooms){
   if(claim.areaSqFt===null||claim.conflictingEvidence)conflicts.push({id:'evidence-'+claim.id,claimId:claim.id,code:'uncertain-plan-reading',label:claim.label});
   if(scope.mode!=='room')continue;
@@ -67,9 +69,15 @@ export function comparePlanScope(claims,scope,{wholeProject=false,links={}}={}){
   used.add(target.id);const entered=target.measurement==='area'?target.area:target.length*target.width,diff=discrepancy(entered,claim.areaSqFt);
   matches.push({claimId:claim.id,roomId:target.id,enteredSqFt:entered,planSqFt:claim.areaSqFt});if(diff)conflicts.push({id:'area-'+claim.id,claimId:claim.id,roomId:target.id,label:claim.label,...diff});
  }
- if(scope.mode==='room')for(const room of scope.rooms)if(!used.has(room.id))conflicts.push({id:'input-'+room.id,roomId:room.id,code:'unmatched-entered-room',label:room.name});
+ if(scope.mode==='room')for(const room of scope.rooms)if(!used.has(room.id))conflicts.push({id:'input-'+scope.rooms.indexOf(room),roomId:room.id,code:'unmatched-entered-room',label:room.name});
  const completeMeasurements=rooms.length>0&&rooms.every(c=>c.areaSqFt!==null&&!c.conflictingEvidence);
  const total=rooms.reduce((sum,c)=>sum+(c.areaSqFt||0),0);
  if(scope.mode==='project'&&wholeProject&&completeMeasurements){const diff=discrepancy(scope.area,total);if(diff)conflicts.push({id:'project-total',code:diff.code,label:scope.name,...diff});}
  return{matches,conflicts,planRoomCount:rooms.length,printedRoomAreaSqFt:total,completeMeasurements,wholeProject,limits:'Pixel geometry and printed labels do not establish net cleanable area or prove that every room was recognized.'};
 }
+
+export function planScopeFingerprint(scope){
+ const raw=JSON.stringify([scope.mode,scope.unit,scope.area,scope.gross,scope.common,scope.rooms.map(r=>[r.name,r.category,r.measurement,r.area,r.length,r.width])]);
+ let hash=2166136261;for(let i=0;i<raw.length;i++)hash=Math.imul(hash^raw.charCodeAt(i),16777619);return 'scope-v1-'+(hash>>>0).toString(16);
+}
+export function reviewDecisionsValid(comparison,decisions){return comparison.conflicts.every(c=>decisions.some(d=>d.conflictId===c.id&&['partial-scope','discuss-on-call'].includes(d.resolution)&&typeof d.reason==='string'&&d.reason.trim().length>=8&&d.reason.length<=1000));}

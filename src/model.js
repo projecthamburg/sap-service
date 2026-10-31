@@ -21,6 +21,11 @@ export const initialState = () => ({
   mode: "project",
   category: "residential",
   name: "",
+  budget: 0,
+  referredBy: "",
+  expectations: "",
+  concerns: "",
+  additionalInfo: "",
   city: "",
   province: "QC",
   context: "new",
@@ -199,7 +204,7 @@ export function restoreState(raw) {
     source = parsed.scope;
   for (const key of Object.keys(base)) {
     if (typeof base[key] === "string" && typeof source[key] === "string")
-      base[key] = source[key].slice(0, 250);
+      base[key] = source[key].slice(0, ["expectations","concerns","additionalInfo"].includes(key) ? 2000 : 250);
     if (typeof base[key] === "number" && Number.isFinite(source[key]))
       base[key] = Math.max(0, Math.min(10000000, source[key]));
     if (typeof base[key] === "boolean" && typeof source[key] === "boolean")
@@ -253,7 +258,7 @@ export function restoreState(raw) {
   return base;
 }
 export const serializeScope = (state) =>
-  JSON.stringify({ version: 1, scope: { ...state, step: 0 } });
+  JSON.stringify({ version: 1, scope: { ...state, referredBy:"", expectations:"", concerns:"", additionalInfo:"", step: 0 } });
 export const displayArea = (sqft, unit) =>
   Math.round(fromSqFt(sqft, unit) * 100) / 100 || "";
 export const parseArea = (value, unit) => toSqFt(Number(value) || 0, unit);

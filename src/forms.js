@@ -261,7 +261,7 @@ export function openQuote(estimator) {
           notes: values.notes,
           consent: true,
           language,
-          estimate: estimator.exportData(),
+          estimate: {...estimator.exportData(),...(estimator.planReview?{planReviewProof:estimator.planReview.proof}:{})},
           website: values.website,
         },
         estimator.files,
