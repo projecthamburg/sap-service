@@ -42,6 +42,7 @@ let index = await readFile(resolve(out, "index.html"), "utf8");
 index = index
   .replace('./src/styles.css"', `./src/styles.css?v=${release}"`)
   .replace('./src/app.js"', `./src/app.js?v=${release}"`)
+  .replace('href="./src/brand.js"', `href="./src/brand.js?v=${release}"`)
   .replace(
     "</head>",
     `<script type="application/json" id="site-config">${(

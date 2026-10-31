@@ -1246,7 +1246,7 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
 select,
 textarea {
   width: 100%;
-  min-height: 45px;
+  min-height: 48px;
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 3px;
@@ -1261,6 +1261,16 @@ input::placeholder,
 textarea::placeholder {
   color: var(--muted);
   opacity: 0.7;
+}
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 48px;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3 6 5 5 5-5' fill='none' stroke='%23677892' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
 }
 input:hover,
 select:hover,

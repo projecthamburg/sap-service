@@ -357,7 +357,13 @@ for (const device of matrix) {
       await capture(language + "-comparison-dark");
       await execute('document.querySelector("[data-action=theme]").click();');
       await click('[data-est="sample"]');
+      const selectHeights = [];
       for (let i = 0; i < 5; i++) {
+        selectHeights.push(
+          ...(await execute(
+            'return [...document.querySelectorAll("#estimate-form select")].filter(e=>e.getClientRects().length).map(e=>e.getBoundingClientRect().height);'
+          ))
+        );
         check(
           language + " estimator card " + (i + 1) + " fits viewport",
           await execute(
@@ -367,6 +373,11 @@ for (const device of matrix) {
         if (i === 2) await capture(language + "-room-card");
         await click('#estimate-form button[type="submit"]');
       }
+      check(
+        language + " estimator selects have comfortable tap areas",
+        selectHeights.length > 0 && Math.min(...selectHeights) >= 44,
+        "minimum height " + Math.min(...selectHeights)
+      );
       check(
         language + " sample estimate completes",
         await execute(
@@ -430,10 +441,23 @@ for (const device of matrix) {
           'return {scale:visualViewport.scale,fontSize:getComputedStyle(document.querySelector("#career-form [name=name]")).fontSize};'
         );
         check(
-          language + " phone input stays readable without automatic zoom",
-          inputView.scale <= 1.05 && parseFloat(inputView.fontSize) >= 16,
+          language + " phone input uses readable text",
+          parseFloat(inputView.fontSize) >= 16,
           JSON.stringify(inputView)
         );
+        if (typeof inputView.scale === "number")
+          check(
+            language + " input focus preserves viewport scale",
+            inputView.scale <= 1.05,
+            String(inputView.scale)
+          );
+        else {
+          entry.manualReviewRequired ||= [];
+          entry.manualReviewRequired.push(
+            language +
+              " focused-input screenshot: the iOS driver did not expose visualViewport.scale; inspect the retained image for unwanted zoom."
+          );
+        }
       }
       await capture(language + "-input-focused");
       await request(`/session/${id}/element/${nameId}/clear`, {});
@@ -476,9 +500,14 @@ for (const device of matrix) {
         )
       );
       entry.manualReviewRequired = [
+        ...(entry.manualReviewRequired || []),
         "Review the iOS calendar screenshot: cross-origin frame contents cannot be inspected by its remote debugger.",
       ];
       await capture("calendar");
+      await execute(
+        'document.querySelector("#booking-frame").scrollIntoView({block:"end",behavior:"instant"});'
+      );
+      await capture("calendar-bottom");
     } else {
       const frameElement = (
         await request(`/session/${id}/element`, {
