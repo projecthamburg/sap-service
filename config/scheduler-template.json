@@ -15,7 +15,7 @@
   "providerSlotConvention": "UTC times converted by current provider to visitor timezone; verify actual UI before changing this mapping.",
   "winterProviderStart": "14:00",
   "winterProviderEnd": "22:00",
-  "nextSeasonalReview": "2027-03-08",
+  "nextSeasonalReview": "2027-02-12",
   "fields": [
     {
       "fieldName": "field_1793306679264",
