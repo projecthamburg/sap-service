@@ -26,15 +26,27 @@ mock.method(DynamoDBDocumentClient.prototype, "send", async (command) => {
     type = command.constructor.name;
   if (type === "TransactWriteCommand") {
     for (const action of input.TransactItems) {
-      if (action.Update && records.get(action.Update.Key.pk)?.status !== "pending")
-        throw Object.assign(new Error("Already received"), {name:"TransactionCanceledException"});
+      if (
+        action.Update &&
+        records.get(action.Update.Key.pk)?.status !== "pending"
+      )
+        throw Object.assign(new Error("Already received"), {
+          name: "TransactionCanceledException",
+        });
     }
     for (const action of input.TransactItems) {
       if (action.Delete) records.delete(action.Delete.Key.pk);
-      if (action.Put) records.set(action.Put.Item.pk, structuredClone(action.Put.Item));
+      if (action.Put)
+        records.set(action.Put.Item.pk, structuredClone(action.Put.Item));
       if (action.Update) {
-        const record = records.get(action.Update.Key.pk), v = action.Update.ExpressionAttributeValues;
-        Object.assign(record, {status:v[":received"],recordType:v[":type"],receivedAt:v[":at"],notification:v[":notification"]});
+        const record = records.get(action.Update.Key.pk),
+          v = action.Update.ExpressionAttributeValues;
+        Object.assign(record, {
+          status: v[":received"],
+          recordType: v[":type"],
+          receivedAt: v[":at"],
+          notification: v[":notification"],
+        });
       }
     }
     return {};
@@ -51,10 +63,26 @@ mock.method(DynamoDBDocumentClient.prototype, "send", async (command) => {
     return {};
   }
   if (type === "QueryCommand") {
-    const all = [...records.values()].filter((r) => r.status === "received").sort((a,b) => b.receivedAt.localeCompare(a.receivedAt));
-    const start = input.ExclusiveStartKey ? all.findIndex(r=>r.pk===input.ExclusiveStartKey.pk)+1 : 0;
-    const items = all.slice(start, start + input.Limit), last = items.at(-1);
-    return {Items:items, ...(start + items.length < all.length ? {LastEvaluatedKey:{pk:last.pk,recordType:last.recordType,receivedAt:last.receivedAt}} : {})};
+    const all = [...records.values()]
+      .filter((r) => r.status === "received")
+      .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
+    const start = input.ExclusiveStartKey
+      ? all.findIndex((r) => r.pk === input.ExclusiveStartKey.pk) + 1
+      : 0;
+    const items = all.slice(start, start + input.Limit),
+      last = items.at(-1);
+    return {
+      Items: items,
+      ...(start + items.length < all.length
+        ? {
+            LastEvaluatedKey: {
+              pk: last.pk,
+              recordType: last.recordType,
+              receivedAt: last.receivedAt,
+            },
+          }
+        : {}),
+    };
   }
   if (type === "UpdateCommand") {
     const record = records.get(input.Key.pk);
@@ -397,25 +425,199 @@ test("excessive public submissions are rate-limited before storage", async () =>
   assert.equal(records.size, before);
 });
 
-
 test("authenticated inbox pagination retains older submissions and rejects malformed cursors", async () => {
-  const seeded=[];
-  for(let i=0;i<105;i++) {
-    const pk="SAP-Q-"+i.toString(16).toUpperCase().padStart(12,"0");
+  const seeded = [];
+  for (let i = 0; i < 105; i++) {
+    const pk = "SAP-Q-" + i.toString(16).toUpperCase().padStart(12, "0");
     seeded.push(pk);
-    records.set(pk,{pk,status:"received",recordType:"received",receivedAt:new Date(Date.UTC(2026,0,1,0,0,i)).toISOString(),completionHash:"never-return-this"});
+    records.set(pk, {
+      pk,
+      status: "received",
+      recordType: "received",
+      receivedAt: new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString(),
+      completionHash: "never-return-this",
+    });
   }
   try {
-    const first=parsed(await handler(event("/admin/submissions",null,true,"GET")));
-    assert.equal(first.submissions.length,100);assert.ok(first.nextCursor);
-    const request={...event("/admin/submissions",null,true,"GET"),rawQueryString:"cursor="+first.nextCursor};
-    const second=parsed(await handler(request));
-    const all=[...first.submissions,...second.submissions];
-    assert.ok(seeded.every(pk=>all.some(r=>r.pk===pk)));
-    assert.equal(new Set(all.map(r=>r.pk)).size,all.length);
-    assert.ok(all.every(r=>!r.completionHash));
-    assert.equal(second.nextCursor,null);
-    const invalid=await handler({...request,rawQueryString:"cursor="+Buffer.from(JSON.stringify({pk:seeded[0],recordType:"notification",receivedAt:"2026-01-01T00:00:00.000Z"})).toString("base64url")});
-    assert.equal(invalid.statusCode,400);
-  } finally {for(const pk of seeded) records.delete(pk);}
+    const first = parsed(
+      await handler(event("/admin/submissions", null, true, "GET"))
+    );
+    assert.equal(first.submissions.length, 100);
+    assert.ok(first.nextCursor);
+    const request = {
+      ...event("/admin/submissions", null, true, "GET"),
+      rawQueryString: "cursor=" + first.nextCursor,
+    };
+    const second = parsed(await handler(request));
+    const all = [...first.submissions, ...second.submissions];
+    assert.ok(seeded.every((pk) => all.some((r) => r.pk === pk)));
+    assert.equal(new Set(all.map((r) => r.pk)).size, all.length);
+    assert.ok(all.every((r) => !r.completionHash));
+    assert.equal(second.nextCursor, null);
+    const invalid = await handler({
+      ...request,
+      rawQueryString:
+        "cursor=" +
+        Buffer.from(
+          JSON.stringify({
+            pk: seeded[0],
+            recordType: "notification",
+            receivedAt: "2026-01-01T00:00:00.000Z",
+          })
+        ).toString("base64url"),
+    });
+    assert.equal(invalid.statusCode, 400);
+  } finally {
+    for (const pk of seeded) records.delete(pk);
+  }
+});
+
+test("review proofs bind the current scope, original plan bytes and server calculation", async () => {
+  const { createHash } = await import("node:crypto"),
+    { planTiles, planScopeFingerprint } = await import(
+      "../src/plan-geometry.js"
+    );
+  const hash = (v) => createHash("sha256").update(v).digest("hex");
+  process.env.PLAN_REVIEW_ENABLED = "true";
+  process.env.OPENAI_API_KEY = "synthetic-provider-key";
+  const scope = {
+      ...initialState(),
+      city: "Montréal",
+      category: "office",
+      area: 100,
+    },
+    bytes = Buffer.from("%PDF-1.7\nsynthetic original plan"),
+    reference = "SAP-P-00000000ABCD",
+    token = "synthetic-review-token";
+  const source = {
+      name: "plan.pdf",
+      size: bytes.length,
+      sha256: hash(bytes),
+      page: 1,
+      pageCount: 1,
+      width: 1000,
+      height: 1000,
+    },
+    tiles = planTiles(1000, 1000);
+  const record = {
+    pk: reference,
+    recordType: "plan-review",
+    source,
+    tiles,
+    files: [],
+    completionHash: hash(token),
+    expiresAt: Math.floor(Date.now() / 1000) + 300,
+    batchSize: 4,
+    nextBatch: 1,
+    batches: [
+      {
+        rooms: [
+          {
+            tileId: tiles[0].id,
+            kind: "room",
+            label: "Office",
+            rawText: "100 sq ft",
+            areaValue: 100,
+            areaUnit: "ft2",
+            lengthValue: null,
+            widthValue: null,
+            dimensionUnit: "unknown",
+            confidence: "readable",
+            box: { x: 100, y: 100, width: 200, height: 200 },
+          },
+        ],
+        notes: [],
+      },
+    ],
+    batchAttempts: {},
+  };
+  const proof = {
+    reference,
+    token,
+    confirmed: true,
+    scopeFingerprint: planScopeFingerprint(scope),
+    wholeProject: true,
+    linksByIndex: {},
+    decisions: [],
+  };
+  const payload = {
+    language: "en",
+    consent: true,
+    contact: { name: "Synthetic plan client", email: "qa@example.com" },
+    estimate: { scope, planReviewProof: proof },
+  };
+  const files = [
+    { name: source.name, type: "application/pdf", size: bytes.length },
+  ];
+  try {
+    records.set(reference, structuredClone(record));
+    for (const bad of [
+      { ...proof, token: "wrong" },
+      { ...proof, scopeFingerprint: "stale" },
+      { ...proof, confirmed: false },
+    ])
+      assert.equal(
+        (
+          await handler(
+            event(
+              "/v1/quote/prepare",
+              {
+                payload: {
+                  ...payload,
+                  estimate: { scope, planReviewProof: bad },
+                },
+                files,
+              },
+              true
+            )
+          )
+        ).statusCode,
+        400
+      );
+    assert.equal(
+      (await handler(event("/v1/quote/prepare", { payload, files: [] }, true)))
+        .statusCode,
+      400
+    );
+    const prepared = await handler(
+      event("/v1/quote/prepare", { payload, files }, true)
+    );
+    assert.equal(prepared.statusCode, 201, prepared.body);
+    const p = parsed(prepared),
+      stored = records.get(p.reference);
+    assert.equal(stored.payload.estimate.planReview.reference, reference);
+    assert.equal(stored.payload.estimate.planReview.token, undefined);
+    assert.equal(stored.files[0].reviewSourceSha256, hash(bytes));
+    objects.set(stored.files[0].key, {
+      type: "application/pdf",
+      bytes: Buffer.from(bytes.toString().replace("original", "modified")),
+    });
+    const completed = await handler(
+      event("/v1/quote/complete", { reference: p.reference, token: p.token })
+    );
+    assert.equal(completed.statusCode, 400);
+    assert.match(parsed(completed).error, /differs from the reviewed/);
+    assert.equal(records.has(p.reference), false);
+    assert.equal(records.has(reference), false);
+  } finally {
+    records.delete(reference);
+    delete process.env.PLAN_REVIEW_ENABLED;
+    delete process.env.OPENAI_API_KEY;
+  }
+});
+test("isolated plan service does not expose administration; main service rejects public plan routes", async () => {
+  assert.equal(
+    (await handler(event("/v1/plan-review/prepare", {}, true))).statusCode,
+    404
+  );
+  process.env.SERVICE_MODE = "plan-review";
+  try {
+    assert.equal(
+      (await handler(event("/admin/submissions", null, true, "GET")))
+        .statusCode,
+      404
+    );
+  } finally {
+    delete process.env.SERVICE_MODE;
+  }
 });

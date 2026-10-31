@@ -1,4 +1,8 @@
-import {contextCopy,discoveryFields,budgetFitText} from "./client-context.js";
+import {
+  contextCopy,
+  discoveryFields,
+  budgetFitText,
+} from "./client-context.js";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import {
@@ -283,7 +287,9 @@ export async function createEstimatePDF(snapshot, assets) {
   });
   row(
     fr ? "Superficie nettoyable" : "Cleanable area",
-    `${number(r.totalSqFt)} ${imperial} / ${number(fromSqFt(r.totalSqFt, "m2"))} m²`
+    `${number(r.totalSqFt)} ${imperial} / ${number(
+      fromSqFt(r.totalSqFt, "m2")
+    )} m²`
   );
   row(
     fr
@@ -299,7 +305,13 @@ export async function createEstimatePDF(snapshot, assets) {
   newPage(fr ? "Votre portée et votre budget" : "Your scope and budget");
   row(t.city, `${scope.city}, ${scope.province}`);
   row(t.category, category(scope.category));
-  if(scope.budget>0){row(contextCopy(language).budget,money(scope.budget));paragraph(budgetFitText(scope.budget,r,language),{size:9,color:palette.muted});}
+  if (scope.budget > 0) {
+    row(contextCopy(language).budget, money(scope.budget));
+    paragraph(budgetFitText(scope.budget, r, language), {
+      size: 9,
+      color: palette.muted,
+    });
+  }
   row(t.cleanDate, scope.cleanDate || "—");
   row(t.handoverDate, scope.handoverDate || "—");
   section(fr ? "Ventilation du calcul" : "Calculation breakdown");
@@ -376,7 +388,9 @@ export async function createEstimatePDF(snapshot, assets) {
   } else {
     row(
       fr ? "Superficie totale saisie" : "Entered total cleanable area",
-      `${number(r.totalSqFt)} ${imperial} / ${number(fromSqFt(r.totalSqFt, "m2"))} m²`
+      `${number(r.totalSqFt)} ${imperial} / ${number(
+        fromSqFt(r.totalSqFt, "m2")
+      )} m²`
     );
     row(
       fr
@@ -431,20 +445,63 @@ export async function createEstimatePDF(snapshot, assets) {
       : "Conditions, assumptions and next steps"
   );
   const discovery = contextCopy(language);
-  if(scope.referredBy || discoveryFields.some(k=>scope[k])) {
+  if (scope.referredBy || discoveryFields.some((k) => scope[k])) {
     section(discovery.title);
-    if(scope.referredBy) {paragraph(discovery.referredBy,{font:bold,size:9,gap:3});paragraph(scope.referredBy,{size:9});}
-    for(const key of discoveryFields)if(scope[key]){paragraph(discovery[key],{font:bold,size:9,gap:3});paragraph(scope[key],{size:9});}
+    if (scope.referredBy) {
+      paragraph(discovery.referredBy, { font: bold, size: 9, gap: 3 });
+      paragraph(scope.referredBy, { size: 9 });
+    }
+    for (const key of discoveryFields)
+      if (scope[key]) {
+        paragraph(discovery[key], { font: bold, size: 9, gap: 3 });
+        paragraph(scope[key], { size: 9 });
+      }
   }
-  if(snapshot.planReview){
-    const review=snapshot.planReview;
-    section(fr?"Vérification du plan et traçabilité":"Plan review and traceability");
-    paragraph(`${review.reference} · ${review.protocol} · ${review.model}`,{size:9});
-    paragraph(`${review.source.name} · ${fr?"page":"page"} ${review.source.page}/${review.source.pageCount} · ${review.source.width} × ${review.source.height} px · ${review.reviewedTileCount}/${review.tiles.length} ${fr?"tuiles analysées":"tiles reviewed"}`,{size:9});
-    paragraph(fr?"Les données imprimées sont une lecture assistée par IA et vérifiée par le visiteur. Il ne s’agit pas d’un relevé de mesures. Le recouvrement des tuiles ne prouve pas que toutes les pièces ont été reconnues. Aucune saisie de prix n’a été modifiée automatiquement.":"Printed information is an AI-assisted reading reviewed by the visitor, not a surveyed measurement. Tile coverage does not prove every room was recognized. No pricing input was changed automatically.",{size:9,color:palette.muted});
-    if(review.requiresClarification)paragraph(fr?"Des différences restent à clarifier lors de la consultation.":"Differences remain flagged for clarification at consultation.",{size:10,font:bold,color:palette.coral});
-    for(const claim of review.claims.filter(c=>c.kind==="room"))row(claim.label,claim.areaSqFt===null?(fr?"À vérifier":"Unverified"):`${number(claim.areaSqFt)} ${imperial}`);
-    for(const d of review.decisions||[])if(review.comparison?.conflicts.some(c=>c.id===d.conflictId))paragraph(`${d.conflictId}: ${d.resolution} — ${d.reason}`,{size:9});
+  if (snapshot.planReview) {
+    const review = snapshot.planReview;
+    section(
+      fr
+        ? "Vérification du plan et traçabilité"
+        : "Plan review and traceability"
+    );
+    paragraph(`${review.reference} · ${review.protocol} · ${review.model}`, {
+      size: 9,
+    });
+    paragraph(
+      `${review.source.name} · ${fr ? "page" : "page"} ${review.source.page}/${
+        review.source.pageCount
+      } · ${review.source.width} × ${review.source.height} px · ${
+        review.reviewedTileCount
+      }/${review.tiles.length} ${fr ? "tuiles analysées" : "tiles reviewed"}`,
+      { size: 9 }
+    );
+    paragraph(
+      fr
+        ? "Les données imprimées sont une lecture assistée par IA et vérifiée par le visiteur. Il ne s’agit pas d’un relevé de mesures. Le recouvrement des tuiles ne prouve pas que toutes les pièces ont été reconnues. Aucune saisie de prix n’a été modifiée automatiquement."
+        : "Printed information is an AI-assisted reading reviewed by the visitor, not a surveyed measurement. Tile coverage does not prove every room was recognized. No pricing input was changed automatically.",
+      { size: 9, color: palette.muted }
+    );
+    if (review.requiresClarification)
+      paragraph(
+        fr
+          ? "Des différences restent à clarifier lors de la consultation."
+          : "Differences remain flagged for clarification at consultation.",
+        { size: 10, font: bold, color: palette.coral }
+      );
+    for (const claim of review.claims.filter((c) => c.kind === "room"))
+      row(
+        claim.label,
+        claim.areaSqFt === null
+          ? fr
+            ? "À vérifier"
+            : "Unverified"
+          : `${number(claim.areaSqFt)} ${imperial}`
+      );
+    for (const d of review.decisions || [])
+      if (review.comparison?.conflicts.some((c) => c.id === d.conflictId))
+        paragraph(`${d.conflictId}: ${d.resolution} — ${d.reason}`, {
+          size: 9,
+        });
   }
   for (let index = 0; index < t.conditions.length; index += 2) {
     const entries = t.conditions
@@ -553,7 +610,7 @@ export async function createEstimatePDF(snapshot, assets) {
           pricingVersion: PRICING.version,
           scope,
           estimate: r,
-          ...(snapshot.planReview ? {planReview:snapshot.planReview} : {}),
+          ...(snapshot.planReview ? { planReview: snapshot.planReview } : {}),
         },
         null,
         2

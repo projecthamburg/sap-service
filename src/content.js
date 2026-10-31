@@ -400,7 +400,7 @@ export const content = {
       sampleHelp:
         "Loads a predefined room schedule. It does not read dimensions from your uploaded plans.",
       noExtraction:
-        "We do not automatically extract dimensions from uploaded plans. Confirm the measurements with your drawings.",
+        "Optional plan review reads printed dimensions from one selected page for you to verify. It never changes your measurements silently.",
       fileError:
         "Choose a supported file under 10 MB. Maximum 6 files and 25 MB total.",
       calculate: "See my planning estimate",
@@ -455,6 +455,10 @@ export const content = {
       grossError:
         "Cleanable area cannot exceed gross area; common area cannot exceed cleanable area.",
       dateError: "Handover must be on or after the cleaning date.",
+      budgetError:
+        "Enter a valid non-negative cleaning budget, or leave it blank.",
+      quantityError:
+        "Use whole, valid quantities for rooms, units, floors and visits.",
       missingCity: "Enter a city or municipality.",
       sampleLoaded: "Sample loaded. All rooms and dimensions are editable.",
       savedMessage:
@@ -645,7 +649,10 @@ export const content = {
       privacyTitle: "Privacy notice",
       termsTitle: "Estimate terms",
       privacy: [
-        ["Optional AI plan review", "Only if you explicitly opt in, the selected plan page is rendered into overlapping image tiles and sent through private AWS storage to OpenAI for reading printed information. Other pages and files are not sent for that review. Review tiles and the anonymous review job expire after 7 days; processing may occur outside Canada under the provider’s API data policies. A review attached to a submitted enquiry is retained with that enquiry for 90 days. AI readings can be wrong and require your review; they do not automatically change estimate inputs."],
+        [
+          "Optional AI plan review",
+          "Only if you explicitly opt in, the selected plan page is rendered into overlapping image tiles and sent through private AWS storage to OpenAI for reading printed information. Other pages and files are not sent for that review. Review tiles and the anonymous review job expire after 7 days; processing may occur outside Canada under the provider’s API data policies. A review attached to a submitted enquiry is retained with that enquiry for 90 days. AI readings can be wrong and require your review; they do not automatically change estimate inputs.",
+        ],
         [
           "Who to contact",
           "This SAP Service Inc. proposal is operated by {operatorName}. Until an agreed handover, enquiries, uploads and recruitment submissions are managed by {operatorName}. For access, correction or deletion requests, contact {contactEmail}.",
@@ -1093,7 +1100,7 @@ export const content = {
       sampleHelp:
         "Charge une liste prédéfinie de pièces, sans lire les dimensions de vos plans téléversés.",
       noExtraction:
-        "Les dimensions ne sont pas extraites automatiquement. Confirmez les mesures à partir de vos plans.",
+        "L’analyse facultative lit les mesures imprimées avec votre consentement. Confirmez les données du plan; aucune mesure saisie n’est modifiée automatiquement.",
       fileError:
         "Choisissez un format accepté de moins de 10 Mo. Maximum 6 fichiers et 25 Mo au total.",
       calculate: "Voir mon estimation",
@@ -1151,6 +1158,10 @@ export const content = {
       grossError:
         "La superficie à nettoyer ne peut dépasser la superficie brute; les aires communes ne peuvent dépasser le total.",
       dateError: "La livraison doit suivre ou coïncider avec le nettoyage.",
+      budgetError:
+        "Saisissez un budget de nettoyage positif valide, ou laissez le champ vide.",
+      quantityError:
+        "Utilisez des quantités entières valides pour les pièces, unités, étages et visites.",
       missingCity: "Indiquez une ville ou une municipalité.",
       sampleLoaded:
         "Exemple chargé. Vous pouvez modifier chaque pièce et ses dimensions.",
@@ -1341,7 +1352,10 @@ export const content = {
       privacyTitle: "Avis de confidentialité",
       termsTitle: "Modalités d’estimation",
       privacy: [
-        ["Vérification facultative du plan par IA", "Uniquement avec votre consentement explicite, la page choisie est divisée en tuiles avec recouvrement et transmise, via le stockage privé AWS, à OpenAI pour lire les données imprimées. Les autres pages et fichiers ne sont pas transmis pour cette analyse. Les tuiles et le dossier anonyme expirent après 7 jours; le traitement peut avoir lieu hors du Canada selon les politiques API du fournisseur. Une analyse jointe à une demande est conservée avec celle-ci pendant 90 jours. Les lectures peuvent être erronées et doivent être vérifiées; elles ne modifient jamais automatiquement les saisies du calculateur."],
+        [
+          "Vérification facultative du plan par IA",
+          "Uniquement avec votre consentement explicite, la page choisie est divisée en tuiles avec recouvrement et transmise, via le stockage privé AWS, à OpenAI pour lire les données imprimées. Les autres pages et fichiers ne sont pas transmis pour cette analyse. Les tuiles et le dossier anonyme expirent après 7 jours; le traitement peut avoir lieu hors du Canada selon les politiques API du fournisseur. Une analyse jointe à une demande est conservée avec celle-ci pendant 90 jours. Les lectures peuvent être erronées et doivent être vérifiées; elles ne modifient jamais automatiquement les saisies du calculateur.",
+        ],
         [
           "Personne-ressource",
           "Cette proposition pour SAP Service Inc. est exploitée par {operatorName}. Jusqu’au transfert convenu, {operatorName} gère les demandes, fichiers et candidatures. Pour un accès, une rectification ou une suppression, écrivez à {contactEmail}.",

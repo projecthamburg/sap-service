@@ -1,14 +1,64 @@
 export const discoveryFields = ["expectations", "concerns", "additionalInfo"];
 const copy = {
- en:{budget:"Target cleaning budget (optional, CAD before tax)",budgetHelp:"Helps prepare the conversation. It does not change the calculation or commit you to a price.",referredBy:"Referred by (person or company, optional)",title:"What should we know before we talk?",intro:"Optional details help us prepare a useful consultation. Share priorities the measurements alone cannot explain.",expectations:"Your expectations and ideas",expectationsHelp:"What would a successful handover look like? Which finishes, spaces or presentation details matter most?",concerns:"Concerns, deadlines and site constraints",concernsHelp:"Tell us about remaining trades, sensitive finishes, access restrictions, inspections or a date that cannot move.",additionalInfo:"Questions or other information for the call",additionalInfoHelp:"Anything else that could affect the quality, sequence or delivery of the work. Avoid unnecessary sensitive information."},
- fr:{budget:"Budget de nettoyage visé (facultatif, CAD avant taxes)",budgetHelp:"Pour préparer l’échange. Ce montant ne modifie pas le calcul et ne vous engage pas à un prix.",referredBy:"Recommandé par (personne ou entreprise, facultatif)",title:"Que devrions-nous savoir avant l’appel?",intro:"Ces précisions facultatives aident à préparer une consultation utile, au-delà des seules mesures.",expectations:"Vos attentes et vos idées",expectationsHelp:"À quoi ressemblerait une livraison réussie? Quels finis, espaces ou détails de présentation comptent le plus?",concerns:"Préoccupations, échéances et contraintes du chantier",concernsHelp:"Autres corps de métier, finis fragiles, accès restreints, inspections ou date impérative.",additionalInfo:"Questions ou autres précisions pour l’appel",additionalInfoHelp:"Tout élément qui pourrait influencer la qualité, la séquence ou la livraison. Évitez les renseignements sensibles inutiles."}
+  en: {
+    budget: "Target cleaning budget (optional, CAD before tax)",
+    budgetHelp:
+      "Helps prepare the conversation. It does not change the calculation or commit you to a price.",
+    referredBy: "Referred by (person or company, optional)",
+    title: "What should we know before we talk?",
+    intro:
+      "Optional details help us prepare a useful consultation. Share priorities the measurements alone cannot explain.",
+    expectations: "Your expectations and ideas",
+    expectationsHelp:
+      "What would a successful handover look like? Which finishes, spaces or presentation details matter most?",
+    concerns: "Concerns, deadlines and site constraints",
+    concernsHelp:
+      "Tell us about remaining trades, sensitive finishes, access restrictions, inspections or a date that cannot move.",
+    additionalInfo: "Questions or other information for the call",
+    additionalInfoHelp:
+      "Anything else that could affect the quality, sequence or delivery of the work. Avoid unnecessary sensitive information.",
+  },
+  fr: {
+    budget: "Budget de nettoyage visé (facultatif, CAD avant taxes)",
+    budgetHelp:
+      "Pour préparer l’échange. Ce montant ne modifie pas le calcul et ne vous engage pas à un prix.",
+    referredBy: "Recommandé par (personne ou entreprise, facultatif)",
+    title: "Que devrions-nous savoir avant l’appel?",
+    intro:
+      "Ces précisions facultatives aident à préparer une consultation utile, au-delà des seules mesures.",
+    expectations: "Vos attentes et vos idées",
+    expectationsHelp:
+      "À quoi ressemblerait une livraison réussie? Quels finis, espaces ou détails de présentation comptent le plus?",
+    concerns: "Préoccupations, échéances et contraintes du chantier",
+    concernsHelp:
+      "Autres corps de métier, finis fragiles, accès restreints, inspections ou date impérative.",
+    additionalInfo: "Questions ou autres précisions pour l’appel",
+    additionalInfoHelp:
+      "Tout élément qui pourrait influencer la qualité, la séquence ou la livraison. Évitez les renseignements sensibles inutiles.",
+  },
 };
-export const contextCopy=language=>copy[language==='fr'?'fr':'en'];
-export function budgetFit(budget,result){
- if(!Number.isFinite(budget)||budget<=0||!result)return'unspecified';
- return budget<result.low?'below':budget<result.high?'overlap':'within';
+export const contextCopy = (language) => copy[language === "fr" ? "fr" : "en"];
+export function budgetFit(budget, result) {
+  if (!Number.isFinite(budget) || budget <= 0 || !result) return "unspecified";
+  return budget < result.low
+    ? "below"
+    : budget < result.high
+    ? "overlap"
+    : "within";
 }
-export function budgetFitText(budget,result,language='en'){
- const state=budgetFit(budget,result),fr=language==='fr';
- return ({unspecified:'',below:fr?'La fourchette indicative dépasse votre budget visé. L’appel permettra de revoir la portée, les phases et l’échéancier; le calcul n’a pas été réduit pour correspondre au budget.':'The planning range is above your target budget. We can discuss scope, phases and timing; the calculation has not been reduced to fit your budget.',overlap:fr?'Votre budget se situe dans la fourchette indicative, mais sous sa limite supérieure. La portée et les conditions restent à confirmer.':'Your budget overlaps the planning range but is below its upper end. Scope and site conditions still need confirmation.',within:fr?'La fourchette indicative est comprise dans votre budget visé. Il reste à confirmer la portée et une soumission écrite.':'The planning range fits within your target budget. Scope verification and a written quotation are still required.'})[state];
+export function budgetFitText(budget, result, language = "en") {
+  const state = budgetFit(budget, result),
+    fr = language === "fr";
+  return {
+    unspecified: "",
+    below: fr
+      ? "La fourchette indicative dépasse votre budget visé. L’appel permettra de revoir la portée, les phases et l’échéancier; le calcul n’a pas été réduit pour correspondre au budget."
+      : "The planning range is above your target budget. We can discuss scope, phases and timing; the calculation has not been reduced to fit your budget.",
+    overlap: fr
+      ? "Votre budget se situe dans la fourchette indicative, mais sous sa limite supérieure. La portée et les conditions restent à confirmer."
+      : "Your budget overlaps the planning range but is below its upper end. Scope and site conditions still need confirmation.",
+    within: fr
+      ? "La fourchette indicative est comprise dans votre budget visé. Il reste à confirmer la portée et une soumission écrite."
+      : "The planning range fits within your target budget. Scope verification and a written quotation are still required.",
+  }[state];
 }

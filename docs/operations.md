@@ -13,14 +13,15 @@ GitHub Pages serves only `dist/`, built from `index.html`, `src/` and `public/`.
 The dedicated AWS resources are recorded in `api/deployment.json`:
 
 - Region: `ca-central-1` (Canada Central).
-- Lambda: `sap-service-api`, Node.js 22, 256 MB, 30-second timeout.
+- Intake Lambda: `sap-service-api`, Node.js 22, 256 MB, 30-second timeout.
+- Plan-review Lambda: `sap-service-plan-review`, isolated routes, 120-second timeout; separate concurrency prevents model latency blocking intake.
 - DynamoDB: `sap-service-submissions`, on-demand billing and expiry through TTL.
 - S3: the dedicated `sap-service-private-…-ca-central-1` bucket, encrypted with public access blocked.
 - A resource-scoped runtime role and a separate GitHub deployment role.
 
-No other application resources are modified. The GitHub role can update only this function and pass only its execution role. OIDC trust is restricted to the immutable identity `repo:projecthamburg@79866271/sap-service@1440106954:environment:production-api`, including GitHub's owner and repository IDs. No broad AWS access keys are held in the repository or its secrets.
+No other application resources are modified. The GitHub role can update only these two dedicated functions and pass only its execution role. OIDC trust is restricted to the immutable identity `repo:projecthamburg@79866271/sap-service@1440106954:environment:production-api`, including GitHub's owner and repository IDs. No broad AWS access keys are held in the repository or its secrets.
 
-Encrypted GitHub secrets are `SAP_ADMIN_TOKEN`, `SAP_RATE_SALT` and `RESEND_API_KEY`. Variables are `SAP_AWS_DEPLOY_ROLE` (notification routing is configured in `config/operations.json`). Initial local provisioning prefers the supplied business AWS credentials and saves the generated application secrets with restrictive permissions in ignored `.local/aws-service-secrets.json`. Do not commit or share that file publicly.
+Encrypted GitHub secrets are `SAP_ADMIN_TOKEN`, `SAP_RATE_SALT`, `RESEND_API_KEY` and `SAP_PLAN_OPENAI_KEY`. Variables are `SAP_AWS_DEPLOY_ROLE` (notification routing is configured in `config/operations.json`). Initial local provisioning prefers the supplied business AWS credentials and saves the generated application secrets with restrictive permissions in ignored `.local/aws-service-secrets.json`. Do not commit or share that file publicly.
 
 ## Requests, applications and files
 
@@ -65,3 +66,7 @@ On iPhone, retain normal Safari security settings and visually review the saved 
 For a new checkout, run `npm --prefix api ci`. Run `npm ci` at the root for the PDF bundle and browser tools. `npm test`, `npm run build` and `npm run check` cover the maintained source and public output. For a full local browser pass, keep `npm run dev` running and launch `npm run test:browser`. Use Google Chrome for native screenshot and deployed-form checks.
 
 Update only the dedicated resources. Preserve the runtime role's limited permissions, bucket public-access blocks, signed-upload constraints, expiry settings and exclusion of all private material from Git and public artifacts.
+
+## Plan review and handover
+
+Opt-in page review uses a separate endpoint and explicit consent, seven-day private tiles/jobs, bounded attempts and daily tile allowance. Completed results are cached, and original source bytes are hash checked before accepting a reviewed-plan quotation. See [handover](handover.md), [calculator](calculator-methodology.md), [cost scenarios](cost-estimate.md) and [audit protocol](audit-protocol.md). Optional discovery text is included in the quote/PDF/email, not local saved scopes; budget is context only.

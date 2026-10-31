@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "templateId": 6,
+  "slug": "sap-service-cleanup",
+  "name": "SAP Service Inc. — Scope consultation / Consultation de portée",
+  "description": "30-minute remote scope review: area, cleaning phases, plans/photos, access, priorities and handover dates. Site visits arranged separately. Proposal managed by Project Hamburg. / Consultation à distance de 30 minutes : superficie, phases, plans/photos, accès, priorités et échéancier. Visite sur demande. Proposition gérée par Project Hamburg.",
+  "businessTimezone": "America/Toronto",
+  "businessHoursLocal": {
+    "days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    "start": "09:00",
+    "end": "17:00"
+  },
+  "durationMinutes": 30,
+  "intervalMinutes": 30,
+  "providerSlotConvention": "UTC times converted by current provider to visitor timezone; verify actual UI before changing this mapping.",
+  "winterProviderStart": "14:00",
+  "winterProviderEnd": "22:00",
+  "nextSeasonalReview": "2027-03-08",
+  "fields": [
+    {
+      "fieldName": "field_1793306679264",
+      "fieldType": "text",
+      "label": "First name / Prénom",
+      "placeholder": "Your first name / Votre prénom",
+      "isRequired": true
+    },
+    {
+      "fieldName": "field_1793306688296",
+      "fieldType": "text",
+      "label": "Last name / Nom",
+      "placeholder": "Your last name / Votre nom",
+      "isRequired": true
+    },
+    {
+      "fieldName": "field_1793306695899",
+      "fieldType": "text",
+      "label": "Estimate reference / Référence",
+      "placeholder": "SAP-Q-… or PDF estimate ID, if already supplied / Référence si déjà transmise",
+      "isRequired": false
+    },
+    {
+      "fieldName": "field_1793306704164",
+      "fieldType": "text",
+      "label": "Project city / Ville du chantier",
+      "placeholder": "Montréal, QC / Ottawa, ON",
+      "isRequired": true
+    },
+    {
+      "fieldName": "field_1793419497397",
+      "fieldType": "text",
+      "label": "Phone / Téléphone",
+      "placeholder": "+1 514 555 0123",
+      "isRequired": true
+    },
+    {
+      "fieldName": "field_1793419547531",
+      "fieldType": "email",
+      "label": "Email / Courriel",
+      "placeholder": "you@company.ca",
+      "isRequired": true
+    },
+    {
+      "fieldName": "field_1793419550339",
+      "fieldType": "textarea",
+      "label": "Scope and dates / Portée et dates",
+      "placeholder": "Project type, phases, approximate area, handover date and preferred language / Type, phases, superficie, livraison et langue. No need to repeat a supplied estimate / Inutile de répéter une estimation déjà transmise.",
+      "isRequired": false
+    },
+    {
+      "fieldName": "field_1793422041538",
+      "fieldType": "text",
+      "label": "Cleaning budget / Budget de nettoyage",
+      "placeholder": "CAD before tax, or not sure / CAD avant taxes, ou à préciser",
+      "isRequired": false
+    },
+    {
+      "fieldName": "field_1793422167407",
+      "fieldType": "text",
+      "label": "Referred by / Recommandé par",
+      "placeholder": "Person or company, if any / Personne ou entreprise, le cas échéant",
+      "isRequired": false
+    },
+    {
+      "fieldName": "field_1793422174482",
+      "fieldType": "textarea",
+      "label": "Expectations and ideas / Attentes et idées",
+      "placeholder": "What would a successful handover look like? Priorities, finishes and presentation / Résultat souhaité, priorités, finis et présentation.",
+      "isRequired": false
+    },
+    {
+      "fieldName": "field_1793422179503",
+      "fieldType": "textarea",
+      "label": "Concerns and questions / Préoccupations",
+      "placeholder": "Deadlines, other trades, access, sensitive finishes or special requirements / Échéances, autres corps de métier, accès, finis fragiles ou besoins particuliers.",
+      "isRequired": false
+    }
+  ]
+}

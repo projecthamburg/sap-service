@@ -6,7 +6,7 @@ A bilingual construction-cleaning website for Montréal, Québec and Ontario, wi
 
 ## Develop and verify
 
-The frontend uses standard browser modules. Node.js 22.12 or later is required. Install the root development dependencies to bundle the PDF generator and run browser audits, and the separate private-service dependencies for tests or deployment.
+The frontend uses standard browser modules. Node.js 22.13 or later is required. Install the root development dependencies to bundle the PDF generator and run browser audits, and the separate private-service dependencies for tests or deployment.
 
 ```sh
 npm --prefix api ci
@@ -28,6 +28,8 @@ npm run check         # syntax, asset references and public credential scan
 - Architectural photography, the supplied SAP brand, locally hosted Figtree, Canadian English/French and light/dark themes.
 - Construction cleaning phases, service sectors, operational approach, FAQ and proposal enquiries routed to Project Hamburg.
 - Six-step, inline project/room estimator with metric/imperial units, modifiers, optional plans/photos, editable sample rooms and a matching fictional 1,500-square-foot floor plan.
+- Optional target budget, referral and pre-consultation expectations/concerns; budget does not change pricing.
+- Consent-based plan review of one selected page, using overlapping tiles, source pixel fidelity checks, printed evidence and explicit reconciliation decisions. It never silently replaces entered measurements.
 - Transparent **illustrative** planning assumptions in `src/pricing.js`, local scope saving, JSON export, an actual branded PDF brochure download and formal quotation requests. Measurement plausibility checks require correction or explicit confirmation of unusual values.
 - Five photorealistic illustrative comparisons. They are not presented as completed SAP contracts or transformations of visitor uploads.
 - Careers form with résumé validation, qualifications, consent and a seven-day/four-shift availability grid. Switching languages preserves the application in memory.
@@ -39,13 +41,13 @@ AWS Lambda, DynamoDB and a private S3 bucket operate in **Canada Central**. Plan
 
 `public/site-config.json` contains only public endpoints. API credentials never enter the browser bundle. Inbox access uses a private key held only in the tab's memory. The operator's key is stored locally in ignored `.local/aws-service-secrets.json`; GitHub holds an encrypted copy for service deployment.
 
-No contact details or file bytes are saved in localStorage. Attachments transmit only after explicit submission with consent. The site does not silently extract plan dimensions or transform uploaded photographs.
+Contact fields, private discovery notes and file bytes are not saved in localStorage. Original attachments transmit after request consent. The separate optional plan review sends only the selected page’s rendered tiles after explicit processor consent; these expire after seven days. It does not transform visitor photographs.
 
 ## Deployment
 
 Pushes to `main` run `.github/workflows/pages.yml`: dependency installation, tests, public build, credential checks, a native Chrome audit, eight-state Domscan capture and GitHub Pages deployment. The audit verifies decoded CSS comparison images as well as ordinary photographs, both languages, mobile/desktop layouts, slider controls, themes and public routes. Reports and screenshots are retained as the `browser-audit` Actions artifact.
 
-The manual **Deploy private form service** workflow uses GitHub OIDC to assume a dedicated, limited AWS deployment role. Broad AWS access keys are not stored in GitHub. It deploys the service, checks its health, then publishes the website with the verified endpoint.
+The manual **Deploy private form service** workflow uses GitHub OIDC to assume a dedicated, limited AWS deployment role. Broad AWS access keys are not stored in GitHub. It deploys the intake and isolated plan-review functions, checks their health, then publishes the website with the verified endpoint.
 
 The optional BrowserStack audit runs iPhone Safari, Android Chrome, iPad Safari and Galaxy Tab Chrome in both tablet orientations, macOS Safari, Windows Edge and Windows Firefox sequentially. It reads `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` (or the ignored local credential file), saves device screenshots and reports under `.local/device-audit/`, and closes each remote session. Set `BROWSERSTACK_LOCAL=true`, `BROWSERSTACK_LOCAL_IDENTIFIER` and `SAP_AUDIT_URL` to use an already connected Local tunnel. It exercises public sample data without sending quotation requests, applications or appointments. See [the evidence workflow](docs/evidence-workflow.md) for the source/runtime/reference analysis.
 
@@ -67,3 +69,7 @@ appednix/             Original local material and archived prototypes (ignored)
 The original Claude design is preserved under `appednix/legacy/`. Planning material, `.env`, browser state, private admin keys, installed dependencies and build output are ignored. The build uses an explicit public allowlist and versions browser modules together to avoid stale deployment combinations.
 
 Business details come from the supplied materials: founded in 2020, Montréal, Frank Sungwa, 514-294-3063 and servicesapinc@gmail.com. Unverified hospital/contractor relationships, fictional testimonials, certifications and performance claims are not published as facts. See [asset provenance](docs/assets.md) and [verification](docs/verification.md).
+
+## Review and handover
+
+[Calculator methodology](docs/calculator-methodology.md), [Frank’s rate worksheet](docs/frank-rate-review.csv), [handover runbook](docs/handover.md), [channel worksheet](docs/frank-channel-review.csv), [cost scenarios](docs/cost-estimate.md) and [audit protocol](docs/audit-protocol.md) explain current proposal assumptions and acceptance work. Scheduler business settings are recorded in `config/scheduler-template.json`; its provider UTC conversion requires a seasonal review.

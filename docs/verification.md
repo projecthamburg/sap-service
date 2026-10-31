@@ -56,3 +56,11 @@ Previously completed integration evidence remains available locally: 31 live clo
 ## Reproduce
 
 Run `npm ci`, `npm --prefix api ci`, `npm test`, `npm run build`, `npm run check`. Start `npm run dev`, then run `npm run test:audit` or `npm run domscan`. Set `SAP_AUDIT_CALENDAR=true` to inspect the live scheduling provider. `npm run test:devices` uses optional BrowserStack credentials and closes remote sessions after each configuration. Reports and screenshots are retained in ignored `.local/`. See [operations](operations.md) for private service administration.
+
+## October 31 candidate audit (supersedes the earlier feature counts)
+
+The plan-review/discovery candidate has 72 passing Node tests and 103 passing local Chrome checks. Tests now cover current-scope review proofs, source-file hash mismatch rejection and cascading deletion, isolated service routes, database geometry key reordering, repeated-label ambiguity, non-integer quantities, private discovery storage boundaries and handover placeholder rejection. Real selected-page model calls were exercised; results and failed attempts remain private.
+
+Five base client estimate/upload/brochure journeys and three résumé/availability journeys reached the private inbox. Each PDF's embedded calculation matched the server calculation. Two client extensions added a 12-tile 4200 × 3180 office plan (ownership-core hashes all match), and an explicit printed-plan 1500 versus entered 1000 correction. Ambiguous overlapping readings remain flagged for the call; spatial coverage is not an OCR-completeness guarantee. Ten enquiry/application/revision notifications were independently reported delivered by Resend to the owned operator address.
+
+The first real booking test exposed a provider confirmation bug: the stored UTC appointment was correct, but the guest confirmation displayed UTC time as local and converted a date-only UTC timestamp to the previous day. Remaining booking tests were stopped pending correction. This is a candidate finding, not a claim of final scheduler acceptance. New mobile/tablet publication coverage is recorded separately when completed; the earlier 517 checks do not cover these new features.

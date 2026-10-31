@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "stage": "live",
+  "operator": {
+    "name": "Project Hamburg",
+    "website": "https://projecthamburg.com/",
+    "email": "info@projecthamburg.com"
+  },
+  "contact": {
+    "name": "SAP Service Inc.",
+    "email": "replace-with-confirmed@business.invalid",
+    "phone": null,
+    "phoneDisplay": null,
+    "careOf": null
+  },
+  "siteUrl": "https://replace-with-confirmed-domain.invalid/",
+  "bookingUrl": "https://replace-with-confirmed-scheduler.invalid/booking/sap-service-cleanup",
+  "notifications": {
+    "enabled": true,
+    "from": "SAP Service <replace-with-verified-sender@business.invalid>",
+    "to": "replace-with-confirmed@business.invalid"
+  }
+}

@@ -58,3 +58,16 @@ test("warnings are localized and suggestions do not modify supplied measurements
   assert.match(measurementWarningText(w, "fr", "m2"), /m²/);
   assert.equal(s.area, 10000);
 });
+test("negative room dimensions and fractional fixtures cannot produce a plausible-looking area", () => {
+  const scope = initialState();
+  scope.city = "Montréal";
+  scope.mode = "room";
+  scope.rooms[0].name = "Office";
+  scope.rooms[0].length = -10;
+  scope.rooms[0].width = -10;
+  assert.equal(validateStep(scope, 2).message, "roomError");
+  scope.mode = "project";
+  scope.area = 1000;
+  scope.kitchens = 1.5;
+  assert.equal(validateStep(scope, 2).message, "quantityError");
+});

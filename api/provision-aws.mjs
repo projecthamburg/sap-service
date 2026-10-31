@@ -152,7 +152,10 @@ if (!existingOnly) {
         {
           Effect: "Allow",
           Action: ["logs:CreateLogStream", "logs:PutLogEvents"],
-          Resource: `arn:aws:logs:${region}:${account}:log-group:/aws/lambda/${functionName}:*`,
+          Resource: [functionName, "sap-service-plan-review"].map(
+            (name) =>
+              `arn:aws:logs:${region}:${account}:log-group:/aws/lambda/${name}:*`
+          ),
         },
       ]),
     })
@@ -229,7 +232,12 @@ if (!existingOnly) {
             Expiration: { Days: 90 },
             AbortIncompleteMultipartUpload: { DaysAfterInitiation: 1 },
           },
-          { ID:"Expire-plan-review-tiles",Status:"Enabled",Filter:{Prefix:"submissions/reviews/"},Expiration:{Days:7} },
+          {
+            ID: "Expire-plan-review-tiles",
+            Status: "Enabled",
+            Filter: { Prefix: "submissions/reviews/" },
+            Expiration: { Days: 7 },
+          },
         ],
       },
     })
@@ -332,7 +340,10 @@ const variables = {
   PLAN_DAILY_TILE_LIMIT: "256",
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
   OPERATING_STAGE: operations.stage,
-  OPERATOR_NAME: operations.stage === "proposal" ? operations.operator.name : operations.contact.name,
+  OPERATOR_NAME:
+    operations.stage === "proposal"
+      ? operations.operator.name
+      : operations.contact.name,
   NOTIFICATION_FROM:
     process.env.SAP_NOTIFICATION_FROM || operations.notifications.from,
   NOTIFICATION_TO:
@@ -526,7 +537,9 @@ if (!existingOnly) {
             "lambda:UpdateFunctionConfiguration",
             "lambda:GetFunctionUrlConfig",
           ],
-          Resource: [functionName,"sap-service-plan-review"].map(name=>`arn:aws:lambda:${region}:${account}:function:${name}`),
+          Resource: [functionName, "sap-service-plan-review"].map(
+            (name) => `arn:aws:lambda:${region}:${account}:function:${name}`
+          ),
         },
         {
           Effect: "Allow",
@@ -585,29 +598,140 @@ if (!existingOnly) {
 }
 // Long vision requests have their own function/concurrency; intake and email
 // receipts retain their shorter timeout and independent capacity.
-const planFunctionName="sap-service-plan-review";
-const planVariables={...variables,SERVICE_MODE:"plan-review"};
-let planExists=true;
-try{await lambda.send(new GetFunctionConfigurationCommand({FunctionName:planFunctionName}));}catch(e){if(e.name!=="ResourceNotFoundException")throw e;planExists=false;}
-if(planExists){
-  await lambda.send(new UpdateFunctionCodeCommand({FunctionName:planFunctionName,ZipFile:zip}));
-  await waitUntilFunctionUpdatedV2({client:lambda,maxWaitTime:180},{FunctionName:planFunctionName});
-  await lambda.send(new UpdateFunctionConfigurationCommand({FunctionName:planFunctionName,Role:executionRoleArn,Runtime:"nodejs22.x",Handler:"index.handler",MemorySize:256,Timeout:120,Environment:{Variables:planVariables}}));
-  await waitUntilFunctionUpdatedV2({client:lambda,maxWaitTime:180},{FunctionName:planFunctionName});
-}else{
-  if(existingOnly)throw Error("Plan-review function requires initial provisioning before CI deployment.");
-  await lambda.send(new CreateFunctionCommand({FunctionName:planFunctionName,Role:executionRoleArn,Runtime:"nodejs22.x",Handler:"index.handler",Architectures:["arm64"],MemorySize:256,Timeout:120,Code:{ZipFile:zip},Environment:{Variables:planVariables},Description:"Isolated SAP optional floor-plan review"}));
-  await waitUntilFunctionActiveV2({client:lambda,maxWaitTime:180},{FunctionName:planFunctionName});
+const planFunctionName = "sap-service-plan-review";
+if (!existingOnly) {
+  try {
+    await logs.send(
+      new CreateLogGroupCommand({
+        logGroupName: "/aws/lambda/" + planFunctionName,
+      })
+    );
+  } catch (e) {
+    if (e.name !== "ResourceAlreadyExistsException") throw e;
+  }
+  await logs.send(
+    new PutRetentionPolicyCommand({
+      logGroupName: "/aws/lambda/" + planFunctionName,
+      retentionInDays: 14,
+    })
+  );
+}
+const planVariables = { ...variables, SERVICE_MODE: "plan-review" };
+let planExists = true;
+try {
+  await lambda.send(
+    new GetFunctionConfigurationCommand({ FunctionName: planFunctionName })
+  );
+} catch (e) {
+  if (e.name !== "ResourceNotFoundException") throw e;
+  planExists = false;
+}
+if (planExists) {
+  await lambda.send(
+    new UpdateFunctionCodeCommand({
+      FunctionName: planFunctionName,
+      ZipFile: zip,
+    })
+  );
+  await waitUntilFunctionUpdatedV2(
+    { client: lambda, maxWaitTime: 180 },
+    { FunctionName: planFunctionName }
+  );
+  await lambda.send(
+    new UpdateFunctionConfigurationCommand({
+      FunctionName: planFunctionName,
+      Role: executionRoleArn,
+      Runtime: "nodejs22.x",
+      Handler: "index.handler",
+      MemorySize: 256,
+      Timeout: 120,
+      Environment: { Variables: planVariables },
+    })
+  );
+  await waitUntilFunctionUpdatedV2(
+    { client: lambda, maxWaitTime: 180 },
+    { FunctionName: planFunctionName }
+  );
+} else {
+  if (existingOnly)
+    throw Error(
+      "Plan-review function requires initial provisioning before CI deployment."
+    );
+  await lambda.send(
+    new CreateFunctionCommand({
+      FunctionName: planFunctionName,
+      Role: executionRoleArn,
+      Runtime: "nodejs22.x",
+      Handler: "index.handler",
+      Architectures: ["arm64"],
+      MemorySize: 256,
+      Timeout: 120,
+      Code: { ZipFile: zip },
+      Environment: { Variables: planVariables },
+      Description: "Isolated SAP optional floor-plan review",
+    })
+  );
+  await waitUntilFunctionActiveV2(
+    { client: lambda, maxWaitTime: 180 },
+    { FunctionName: planFunctionName }
+  );
 }
 let planUrl;
-try{planUrl=(await lambda.send(new GetFunctionUrlConfigCommand({FunctionName:planFunctionName}))).FunctionUrl;}catch(e){if(e.name!=="ResourceNotFoundException")throw e;planUrl=(await lambda.send(new CreateFunctionUrlConfigCommand({FunctionName:planFunctionName,AuthType:"NONE"}))).FunctionUrl;}
-if(!existingOnly){
-  for(const permission of [{StatementId:"SAPPlanUrl",Action:"lambda:InvokeFunctionUrl",FunctionUrlAuthType:"NONE"},{StatementId:"SAPPlanInvocation",Action:"lambda:InvokeFunction",InvokedViaFunctionUrl:true}])try{await lambda.send(new AddPermissionCommand({FunctionName:planFunctionName,Principal:"*",...permission}));}catch(e){if(e.name!=="ResourceConflictException")throw e;}
-  await lambda.send(new PutFunctionConcurrencyCommand({FunctionName:planFunctionName,ReservedConcurrentExecutions:2}));
+try {
+  planUrl = (
+    await lambda.send(
+      new GetFunctionUrlConfigCommand({ FunctionName: planFunctionName })
+    )
+  ).FunctionUrl;
+} catch (e) {
+  if (e.name !== "ResourceNotFoundException") throw e;
+  planUrl = (
+    await lambda.send(
+      new CreateFunctionUrlConfigCommand({
+        FunctionName: planFunctionName,
+        AuthType: "NONE",
+      })
+    )
+  ).FunctionUrl;
 }
-const planReviewApiUrl=planUrl.replace(/\/$/, "");
-const planHealthResponse=await fetch(planReviewApiUrl+"/health",{signal:AbortSignal.timeout(20000)}),planHealth=await planHealthResponse.json();
-if(!planHealthResponse.ok||!planHealth.planReview?.enabled)throw Error("Plan-review service is not configured.");
+if (!existingOnly) {
+  for (const permission of [
+    {
+      StatementId: "SAPPlanUrl",
+      Action: "lambda:InvokeFunctionUrl",
+      FunctionUrlAuthType: "NONE",
+    },
+    {
+      StatementId: "SAPPlanInvocation",
+      Action: "lambda:InvokeFunction",
+      InvokedViaFunctionUrl: true,
+    },
+  ])
+    try {
+      await lambda.send(
+        new AddPermissionCommand({
+          FunctionName: planFunctionName,
+          Principal: "*",
+          ...permission,
+        })
+      );
+    } catch (e) {
+      if (e.name !== "ResourceConflictException") throw e;
+    }
+  await lambda.send(
+    new PutFunctionConcurrencyCommand({
+      FunctionName: planFunctionName,
+      ReservedConcurrentExecutions: 2,
+    })
+  );
+}
+const planReviewApiUrl = planUrl.replace(/\/$/, "");
+const planHealthResponse = await fetch(planReviewApiUrl + "/health", {
+    signal: AbortSignal.timeout(20000),
+  }),
+  planHealth = await planHealthResponse.json();
+if (!planHealthResponse.ok || !planHealth.planReview?.enabled)
+  throw Error("Plan-review service is not configured.");
 const apiUrl = functionUrl.replace(/\/$/, "");
 const response = await fetch(`${apiUrl}/health`, {
   signal: AbortSignal.timeout(20000),

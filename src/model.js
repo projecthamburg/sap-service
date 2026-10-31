@@ -104,6 +104,12 @@ export function validateStep(state, step) {
   if (step === 0) {
     if (!state.city.trim()) return { field: "city", message: "missingCity" };
     if (
+      !Number.isFinite(state.budget) ||
+      state.budget < 0 ||
+      state.budget > 10000000
+    )
+      return { field: "budget", message: "budgetError" };
+    if (
       state.cleanDate &&
       state.handoverDate &&
       state.cleanDate > state.handoverDate
@@ -113,12 +119,26 @@ export function validateStep(state, step) {
   if (step === 1 && !state.phases.length)
     return { field: "phases", message: "phaseError" };
   if (step === 2) {
+    for (const key of ["units", "floors", "washrooms", "kitchens"])
+      if (
+        !Number.isSafeInteger(state[key]) ||
+        state[key] < (key === "units" || key === "floors" ? 1 : 0) ||
+        state[key] > 10000
+      )
+        return { field: key, message: "quantityError" };
     if (
       state.mode === "room" &&
       (!state.rooms.length ||
         state.rooms.some(
           (r) =>
-            !r.name.trim() || !Number.isFinite(roomSqft(r)) || roomSqft(r) <= 0
+            !r.name.trim() ||
+            !Number.isFinite(roomSqft(r)) ||
+            roomSqft(r) <= 0 ||
+            (r.measurement !== "area" &&
+              (!Number.isFinite(r.length) ||
+                !Number.isFinite(r.width) ||
+                r.length <= 0 ||
+                r.width <= 0))
         ))
     )
       return { field: "rooms", message: "roomError" };
@@ -140,6 +160,13 @@ export function validateStep(state, step) {
     )
       return { field: "measurementConfirmation", message: "plausibilityError" };
   }
+  if (
+    step === 3 &&
+    (!Number.isSafeInteger(state.visits) ||
+      state.visits < 1 ||
+      state.visits > 100)
+  )
+    return { field: "visits", message: "quantityError" };
   return null;
 }
 export function sampleState(language = "en") {
@@ -204,7 +231,12 @@ export function restoreState(raw) {
     source = parsed.scope;
   for (const key of Object.keys(base)) {
     if (typeof base[key] === "string" && typeof source[key] === "string")
-      base[key] = source[key].slice(0, ["expectations","concerns","additionalInfo"].includes(key) ? 2000 : 250);
+      base[key] = source[key].slice(
+        0,
+        ["expectations", "concerns", "additionalInfo"].includes(key)
+          ? 2000
+          : 250
+      );
     if (typeof base[key] === "number" && Number.isFinite(source[key]))
       base[key] = Math.max(0, Math.min(10000000, source[key]));
     if (typeof base[key] === "boolean" && typeof source[key] === "boolean")
@@ -258,7 +290,17 @@ export function restoreState(raw) {
   return base;
 }
 export const serializeScope = (state) =>
-  JSON.stringify({ version: 1, scope: { ...state, referredBy:"", expectations:"", concerns:"", additionalInfo:"", step: 0 } });
+  JSON.stringify({
+    version: 1,
+    scope: {
+      ...state,
+      referredBy: "",
+      expectations: "",
+      concerns: "",
+      additionalInfo: "",
+      step: 0,
+    },
+  });
 export const displayArea = (sqft, unit) =>
   Math.round(fromSqFt(sqft, unit) * 100) / 100 || "";
 export const parseArea = (value, unit) => toSqFt(Number(value) || 0, unit);

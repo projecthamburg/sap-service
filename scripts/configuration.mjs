@@ -24,9 +24,27 @@ export async function loadOperations(
     !email(settings.operator?.email) ||
     !email(settings.contact?.email) ||
     !email(settings.notifications?.to) ||
+    !email(
+      settings.notifications?.from?.match(/<([^<>]+)>$/)?.[1] ||
+        settings.notifications?.from
+    ) ||
+    typeof settings.notifications?.enabled !== "boolean" ||
+    !settings.contact?.name?.trim() ||
+    !settings.operator?.name?.trim() ||
     /[\r\n]/.test(settings.notifications?.from || "")
   )
     throw Error("Invalid operations configuration.");
+  if (
+    settings.stage === "live" &&
+    [
+      settings.siteUrl,
+      settings.bookingUrl,
+      settings.contact.email,
+      settings.notifications.to,
+      settings.notifications.from,
+    ].some((v) => /\.(?:invalid|example)(?:[/>]|$)/i.test(v))
+  )
+    throw Error("Replace all handover placeholders before deployment.");
   if (settings.contact.phone && !/^\+[0-9]{7,15}$/.test(settings.contact.phone))
     throw Error("Contact phone must use international format.");
   if (
@@ -59,13 +77,42 @@ export async function loadPublicConfiguration() {
 
 // Keep no-JavaScript contacts and structured data on the same handover profile.
 export function configureDocument(html, operations) {
-  const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  html = html.replace(/(<script type="application\/ld\+json">)([\s\S]*?)(<\/script>)/, (_, open, raw, close) => {
-    const schema = JSON.parse(raw);
-    schema.email = operations.contact.email;
-    if (operations.contact.phone) schema.telephone = operations.contact.phone;
-    else delete schema.telephone;
-    return open + JSON.stringify(schema, null, 2).replaceAll('<','\\u003c') + close;
-  });
-  return html.replace(/<noscript[\s\S]*?<\/noscript>/, `<noscript><main style="max-width:50rem;margin:4rem auto;padding:2rem;font-family:Arial,sans-serif"><h1>SAP Service Inc.</h1><p>Nettoyage de chantier · Construction cleaning · Montréal, Québec &amp; Ontario.</p><p>${operations.stage === 'proposal' ? 'Demandes pour la proposition / Proposal enquiries' : 'Contact'}: <a href="mailto:${escape(operations.contact.email)}">${escape(operations.contact.name)} · ${escape(operations.contact.email)}</a></p><p><a href="${escape(operations.bookingUrl)}">Planifier une consultation / Book a consultation</a></p><p>Activez JavaScript pour accéder à l’estimateur. Enable JavaScript to use the estimator.</p></main></noscript>`);
+  const escape = (value) =>
+    String(value).replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }[c])
+    );
+  html = html.replace(
+    /(<script type="application\/ld\+json">)([\s\S]*?)(<\/script>)/,
+    (_, open, raw, close) => {
+      const schema = JSON.parse(raw);
+      schema.email = operations.contact.email;
+      if (operations.contact.phone) schema.telephone = operations.contact.phone;
+      else delete schema.telephone;
+      return (
+        open +
+        JSON.stringify(schema, null, 2).replaceAll("<", "\\u003c") +
+        close
+      );
+    }
+  );
+  return html.replace(
+    /<noscript\b[\s\S]*?<\/noscript\s*>/,
+    `<noscript><main style="max-width:50rem;margin:4rem auto;padding:2rem;font-family:Arial,sans-serif"><h1>SAP Service Inc.</h1><p>Nettoyage de chantier · Construction cleaning · Montréal, Québec &amp; Ontario.</p><p>${
+      operations.stage === "proposal"
+        ? "Demandes pour la proposition / Proposal enquiries"
+        : "Contact"
+    }: <a href="mailto:${escape(operations.contact.email)}">${escape(
+      operations.contact.name
+    )} · ${escape(operations.contact.email)}</a></p><p><a href="${escape(
+      operations.bookingUrl
+    )}">Planifier une consultation / Book a consultation</a></p><p>Activez JavaScript pour accéder à l’estimateur. Enable JavaScript to use the estimator.</p></main></noscript>`
+  );
 }

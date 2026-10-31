@@ -1,4 +1,8 @@
-import {comparePlanScope,planScopeFingerprint,reviewDecisionsValid} from "../src/plan-geometry.js";
+import {
+  comparePlanScope,
+  planScopeFingerprint,
+  reviewDecisionsValid,
+} from "../src/plan-geometry.js";
 import {
   createHash,
   randomBytes,
@@ -125,7 +129,7 @@ export function validateDescriptors(files, kind) {
 function sanitizePayload(payload, kind) {
   if (kind === "quote") {
     const scope = restoreState({ version: 1, scope: payload.estimate.scope });
-    for (const step of [0, 1, 2])
+    for (const step of [0, 1, 2, 3])
       if (validateStep(scope, step))
         throw new Error("Please check the project scope.");
     return {
@@ -213,7 +217,10 @@ async function readRecord(reference) {
   );
 }
 async function removeRecord(record) {
-  if(record.planReviewReference){const review=await readRecord(record.planReviewReference);if(review?.recordType==="plan-review")await removeRecord(review);}
+  if (record.planReviewReference) {
+    const review = await readRecord(record.planReviewReference);
+    if (review?.recordType === "plan-review") await removeRecord(review);
+  }
   for (const file of record.files || [])
     await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: file.key }));
   await db.send(
@@ -226,7 +233,15 @@ async function removeRecord(record) {
   );
 }
 const outbox = createOutbox({ db, table: TABLE, readRecord });
-const planReview = createPlanReviewService({db,s3,table:TABLE,bucket:BUCKET,readRecord,secureEqual,rateLimit});
+const planReview = createPlanReviewService({
+  db,
+  s3,
+  table: TABLE,
+  bucket: BUCKET,
+  readRecord,
+  secureEqual,
+  rateLimit,
+});
 
 export async function handler(event) {
   if (
@@ -253,7 +268,11 @@ export async function handler(event) {
         status: "ok",
         forms: Boolean(TABLE && BUCKET),
         uploadMode: "direct",
-        planReview: { enabled: process.env.PLAN_REVIEW_ENABLED === "true" && Boolean(process.env.OPENAI_API_KEY) },
+        planReview: {
+          enabled:
+            process.env.PLAN_REVIEW_ENABLED === "true" &&
+            Boolean(process.env.OPENAI_API_KEY),
+        },
         region,
         notifications: {
           enabled: process.env.NOTIFICATIONS_ENABLED === "true",
@@ -267,8 +286,20 @@ export async function handler(event) {
       200,
       origin
     );
-  if(process.env.SERVICE_MODE==="plan-review" && !path.startsWith("/v1/plan-review/"))return json({error:"Not found."},404,origin);
-  if(process.env.SERVICE_MODE!=="plan-review" && path.startsWith("/v1/plan-review/"))return json({error:"Use the configured plan-review endpoint."},404,origin);
+  if (
+    process.env.SERVICE_MODE === "plan-review" &&
+    !path.startsWith("/v1/plan-review/")
+  )
+    return json({ error: "Not found." }, 404, origin);
+  if (
+    process.env.SERVICE_MODE !== "plan-review" &&
+    path.startsWith("/v1/plan-review/")
+  )
+    return json(
+      { error: "Use the configured plan-review endpoint." },
+      404,
+      origin
+    );
   const admin = isAdmin(headers);
   if (path.startsWith("/admin/") && !admin)
     return json({ error: "Unauthorized." }, 401, origin);
@@ -289,25 +320,43 @@ export async function handler(event) {
       }
     }
     if (path.startsWith("/v1/plan-review/") && method === "POST") {
-      const response = await planReview.handle(path.split("/").pop(),body,event,admin);
-      return json(response.data,response.status,origin);
+      const response = await planReview.handle(
+        path.split("/").pop(),
+        body,
+        event,
+        admin
+      );
+      return json(response.data, response.status, origin);
     }
     if (path === "/admin/submissions" && method === "GET") {
-      const cursor = new URLSearchParams(event.rawQueryString || "").get("cursor") || event.queryStringParameters?.cursor;
+      const cursor =
+        new URLSearchParams(event.rawQueryString || "").get("cursor") ||
+        event.queryStringParameters?.cursor;
       let startKey;
       if (cursor) {
         try {
           if (cursor.length > 1000) throw Error();
           const value = JSON.parse(Buffer.from(cursor, "base64url").toString());
-          if (!/^SAP-[QAP]-[A-F0-9]{12}$/.test(value.pk) || value.recordType !== "received" || !/^\d{4}-\d{2}-\d{2}T[0-9:.]+Z$/.test(value.receivedAt)) throw Error();
-          startKey = {pk:value.pk, recordType:"received", receivedAt:value.receivedAt};
-        } catch { return json({error:"Invalid page cursor."}, 400, origin); }
+          if (
+            !/^SAP-[QAP]-[A-F0-9]{12}$/.test(value.pk) ||
+            value.recordType !== "received" ||
+            !/^\d{4}-\d{2}-\d{2}T[0-9:.]+Z$/.test(value.receivedAt)
+          )
+            throw Error();
+          startKey = {
+            pk: value.pk,
+            recordType: "received",
+            receivedAt: value.receivedAt,
+          };
+        } catch {
+          return json({ error: "Invalid page cursor." }, 400, origin);
+        }
       }
       const result = await db.send(
         new QueryCommand({
           TableName: TABLE,
           IndexName: "received",
-          ...(startKey ? {ExclusiveStartKey:startKey} : {}),
+          ...(startKey ? { ExclusiveStartKey: startKey } : {}),
           KeyConditionExpression: "recordType = :type",
           ExpressionAttributeValues: { ":type": "received" },
           ScanIndexForward: false,
@@ -319,7 +368,11 @@ export async function handler(event) {
           submissions: (result.Items || []).map(
             ({ completionHash, ...record }) => record
           ),
-          nextCursor: result.LastEvaluatedKey ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString("base64url") : null,
+          nextCursor: result.LastEvaluatedKey
+            ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString(
+                "base64url"
+              )
+            : null,
         },
         200,
         origin
@@ -378,20 +431,88 @@ export async function handler(event) {
       } catch (error) {
         return json({ error: error.message }, 400, origin);
       }
-      let reviewedSource = null, reviewedReference = null;
-      if(kind === "quote" && body.payload.estimate?.planReviewProof) {
-        const proof=body.payload.estimate.planReviewProof;
-        const reviewed=await planReview.handle("status",proof,event,admin);
-        if(reviewed.status!==200 || reviewed.data.status!=="complete" || proof.confirmed!==true || proof.scopeFingerprint!==planScopeFingerprint(payload.estimate.scope))return json({error:"Recheck the plan review against the current measurements."},400,origin);
-        const report=reviewed.data;
-        const linksByIndex=proof.linksByIndex||{}, links={};
-        for(const [claimId,index] of Object.entries(linksByIndex))if(Number.isSafeInteger(index)&&payload.estimate.scope.rooms[index])links[claimId]=payload.estimate.scope.rooms[index].id;
-        const comparison=comparePlanScope(report.claims,payload.estimate.scope,{wholeProject:proof.wholeProject===true,links,geometryWarnings:report.discardedGeometryClaims||0});
-        if(!Array.isArray(proof.decisions)||proof.decisions.length>300||!reviewDecisionsValid(comparison,proof.decisions))return json({error:"Review the measurement differences before sending."},400,origin);
-        reviewedSource=report.source;reviewedReference=report.reference;
-        if(!body.files.some(f=>f.name===reviewedSource.name&&f.size===reviewedSource.size))return json({error:"Attach the original reviewed plan before sending."},400,origin);
-        payload.estimate.planReview={...report,comparison,decisions:proof.decisions.map(d=>({conflictId:String(d.conflictId).slice(0,80),resolution:String(d.resolution).slice(0,40),reason:String(d.reason).slice(0,1000)})),reviewedAt:new Date().toISOString(),scopeFingerprint:proof.scopeFingerprint,requiresClarification:comparison.conflicts.length>0};
-        if(Buffer.byteLength(JSON.stringify(payload))>240000)return json({error:"This review is too large to attach. Please discuss the plan at consultation."},400,origin);
+      let reviewedSource = null,
+        reviewedReference = null;
+      if (kind === "quote" && body.payload.estimate?.planReviewProof) {
+        const proof = body.payload.estimate.planReviewProof;
+        const reviewed = await planReview.handle("status", proof, event, admin);
+        if (
+          reviewed.status !== 200 ||
+          reviewed.data.status !== "complete" ||
+          proof.confirmed !== true ||
+          proof.scopeFingerprint !==
+            planScopeFingerprint(payload.estimate.scope)
+        )
+          return json(
+            {
+              error:
+                "Recheck the plan review against the current measurements.",
+            },
+            400,
+            origin
+          );
+        const report = reviewed.data;
+        const linksByIndex = proof.linksByIndex || {},
+          links = {};
+        for (const [claimId, index] of Object.entries(linksByIndex))
+          if (
+            Number.isSafeInteger(index) &&
+            payload.estimate.scope.rooms[index]
+          )
+            links[claimId] = payload.estimate.scope.rooms[index].id;
+        const comparison = comparePlanScope(
+          report.claims,
+          payload.estimate.scope,
+          {
+            wholeProject: proof.wholeProject === true,
+            links,
+            geometryWarnings: report.discardedGeometryClaims || 0,
+          }
+        );
+        if (
+          !Array.isArray(proof.decisions) ||
+          proof.decisions.length > 300 ||
+          !reviewDecisionsValid(comparison, proof.decisions)
+        )
+          return json(
+            { error: "Review the measurement differences before sending." },
+            400,
+            origin
+          );
+        reviewedSource = report.source;
+        reviewedReference = report.reference;
+        if (
+          !body.files.some(
+            (f) =>
+              f.name === reviewedSource.name && f.size === reviewedSource.size
+          )
+        )
+          return json(
+            { error: "Attach the original reviewed plan before sending." },
+            400,
+            origin
+          );
+        payload.estimate.planReview = {
+          ...report,
+          comparison,
+          decisions: proof.decisions.map((d) => ({
+            conflictId: String(d.conflictId).slice(0, 80),
+            resolution: String(d.resolution).slice(0, 40),
+            reason: String(d.reason).slice(0, 1000),
+          })),
+          reviewedAt: new Date().toISOString(),
+          scopeFingerprint: proof.scopeFingerprint,
+          requiresClarification: comparison.conflicts.length > 0,
+        };
+        if (Buffer.byteLength(JSON.stringify(payload)) > 240000)
+          return json(
+            {
+              error:
+                "This review is too large to attach. Please discuss the plan at consultation.",
+            },
+            400,
+            origin
+          );
       }
       const reference = `SAP-${kind === "quote" ? "Q" : "A"}-${randomUUID()
           .replaceAll("-", "")
@@ -406,7 +527,11 @@ export async function handler(event) {
           name: file.name,
           size: file.size,
           type: MIME[ext],
-          ...(reviewedSource && file.name===reviewedSource.name && file.size===reviewedSource.size ? {reviewSourceSha256:reviewedSource.sha256} : {}),
+          ...(reviewedSource &&
+          file.name === reviewedSource.name &&
+          file.size === reviewedSource.size
+            ? { reviewSourceSha256: reviewedSource.sha256 }
+            : {}),
         };
       });
       const record = {
@@ -420,7 +545,9 @@ export async function handler(event) {
         payload,
         files,
         isTest: admin && headers["x-sap-test"] === "true",
-        ...(reviewedReference ? {planReviewReference:reviewedReference} : {}),
+        ...(reviewedReference
+          ? { planReviewReference: reviewedReference }
+          : {}),
       };
       await db.send(
         new PutCommand({
@@ -526,11 +653,21 @@ export async function handler(event) {
     }
     const receivedAt = new Date().toISOString();
     const job = queuedNotification(record);
-    for(const file of record.files)if(file.reviewSourceSha256){
-      const source=await s3.send(new GetObjectCommand({Bucket:BUCKET,Key:file.key}));
-      const actual=Buffer.from(await source.Body.transformToByteArray());
-      if(hash(actual)!==file.reviewSourceSha256){await removeRecord(record);return json({error:"The uploaded original differs from the reviewed plan."},400,origin);}
-    }
+    for (const file of record.files)
+      if (file.reviewSourceSha256) {
+        const source = await s3.send(
+          new GetObjectCommand({ Bucket: BUCKET, Key: file.key })
+        );
+        const actual = Buffer.from(await source.Body.transformToByteArray());
+        if (hash(actual) !== file.reviewSourceSha256) {
+          await removeRecord(record);
+          return json(
+            { error: "The uploaded original differs from the reviewed plan." },
+            400,
+            origin
+          );
+        }
+      }
     const notification = {
       state: job ? "pending" : record.isTest ? "suppressed" : "disabled",
       attempts: 0,

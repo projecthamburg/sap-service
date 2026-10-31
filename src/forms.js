@@ -261,7 +261,13 @@ export function openQuote(estimator) {
           notes: values.notes,
           consent: true,
           language,
-          estimate: {...estimator.exportData(),...(estimator.planReview?{planReviewProof:estimator.planReview.proof}:{})},
+          estimate: {
+            ...estimator.exportData(),
+            planReview: undefined,
+            ...(estimator.planReview
+              ? { planReviewProof: estimator.planReview.proof }
+              : {}),
+          },
           website: values.website,
         },
         estimator.files,

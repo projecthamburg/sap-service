@@ -96,7 +96,13 @@ async function capture(name, selector) {
 try {
   for (const language of ["en", "fr"]) {
     await goto("#/" + language + "/");
-    check(`${language}: calendar starts loading before scrolling`, await page.$eval("#booking-frame", e => e.loading === "eager" && e.getAttribute("src") === e.dataset.src));
+    check(
+      `${language}: calendar starts loading before scrolling`,
+      await page.$eval(
+        "#booking-frame",
+        (e) => e.loading === "eager" && e.getAttribute("src") === e.dataset.src
+      )
+    );
     check(
       `${language}: homepage language`,
       await page.evaluate(
@@ -319,6 +325,46 @@ try {
     check(
       `${language}: status messages do not intercept controls`,
       toastPassesInput
+    );
+    // Exercise all six actual estimator cards, including optional discovery.
+    await page.$eval('[data-est="sample"]', (e) => e.click());
+    await page.$eval('[name="budget"]', (e) => {
+      e.value = "200";
+      e.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await page.$eval('[name="referredBy"]', (e) => {
+      e.value = "Synthetic audit referral";
+      e.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    for (let card = 0; card < 5; card++) {
+      if (card === 4) {
+        check(
+          `${language}: optional consultation discovery fields render`,
+          await page.$$eval(".discovery-fields textarea", (a) => a.length === 3)
+        );
+        await page.$eval('[name="expectations"]', (e) => {
+          e.value = "Inspection-ready handover";
+          e.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+      }
+      await page.$eval('#estimate-form button[type="submit"]', (e) =>
+        e.click()
+      );
+    }
+    check(
+      `${language}: estimator completes with optional budget and discovery`,
+      Boolean(await page.$(".result-range strong")) &&
+        Boolean(await page.$(".budget-fit"))
+    );
+    await page.$eval('[data-est="save"]', (e) => e.click());
+    check(
+      `${language}: saved scopes exclude private discovery text`,
+      await page.evaluate(() => {
+        const s = JSON.parse(localStorage.getItem("sap:estimate")).scope;
+        return (
+          !s.referredBy && !s.expectations && !s.concerns && !s.additionalInfo
+        );
+      })
     );
     for (const route of ["careers", "privacy", "terms", "inbox"]) {
       await goto("#/" + language + "/" + route);

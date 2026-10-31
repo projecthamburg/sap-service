@@ -363,6 +363,9 @@ for (const device of matrix) {
       await capture(language + "-comparison-dark");
       await execute('document.querySelector("[data-action=theme]").click();');
       await click('[data-est="sample"]');
+      await execute(
+        'for(const [name,value]of Object.entries({budget:"200",referredBy:"Synthetic device audit"})){const e=document.querySelector("[name="+name+"]");e.value=value;e.dispatchEvent(new Event("input",{bubbles:true}));}'
+      );
       const selectHeights = [];
       for (let i = 0; i < 5; i++) {
         selectHeights.push(
@@ -377,6 +380,25 @@ for (const device of matrix) {
           )
         );
         if (i === 2) await capture(language + "-room-card");
+        if (i === 4) {
+          check(
+            language + " consultation discovery fields render",
+            await execute(
+              'return document.querySelectorAll(".discovery-fields textarea").length===3;'
+            )
+          );
+          await execute(
+            'const e=document.querySelector("[name=expectations]");e.value="Inspection-ready handover";e.dispatchEvent(new Event("input",{bubbles:true}));'
+          );
+          check(
+            language + " optional plan review available",
+            await execute(
+              'return Boolean(document.querySelector("[data-est=plan-review]"));'
+            )
+          );
+          await capture(language + "-discovery");
+        }
+
         await click('#estimate-form button[type="submit"]');
       }
       check(
@@ -394,6 +416,11 @@ for (const device of matrix) {
         'document.querySelector(".result-range").scrollIntoView({block:"center",behavior:"instant"});'
       );
       await capture(language + "-estimate");
+      check(
+        language + " budget-fit guidance renders",
+        await execute('return Boolean(document.querySelector(".budget-fit"));')
+      );
+
       await execute('document.querySelector("[data-est=quote]").click();');
       check(
         language + " quotation dialog opens",
