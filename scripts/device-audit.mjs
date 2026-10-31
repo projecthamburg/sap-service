@@ -190,8 +190,11 @@ for (const device of matrix) {
       script: 60000,
       implicit: 0,
     });
-    const execute = async (script, args = []) =>
-      (await request(`/session/${id}/execute/sync`, { script, args })).value;
+    const execute = async (script, args = []) => {
+      if (!script.startsWith("browserstack_executor:")) new Function(script);
+      return (await request(`/session/${id}/execute/sync`, { script, args }))
+        .value;
+    };
     const asyncExecute = async (script, args = []) =>
       (
         await request(`/session/${id}/execute/async`, {
@@ -397,6 +400,32 @@ for (const device of matrix) {
             )
           );
           await capture(language + "-discovery");
+          await execute(
+            'const canvas=Object.assign(document.createElement("canvas"),{width:1400,height:1060});const ctx=canvas.getContext("2d");ctx.fillStyle="white";ctx.fillRect(0,0,1400,1060);ctx.fillStyle="black";ctx.font="30px Arial";ctx.fillText("Synthetic plan preview — no model processing",80,100);const bytes=Uint8Array.from(atob(canvas.toDataURL("image/png").split(",")[1]),c=>c.charCodeAt(0));const files=new DataTransfer();files.items.add(new File([bytes],"device-preview.png",{type:"image/png"}));const e=document.querySelector("[name=projectFiles]");e.files=files.files;e.dispatchEvent(new Event("change",{bubbles:true}));'
+          );
+          await click('[data-est="plan-review"]');
+          await until(
+            'return Boolean(document.querySelector("[data-plan=preview]"));'
+          );
+          await click('[data-plan="preview"]');
+          await until('return Boolean(document.querySelector(".plan-map"));');
+          check(
+            language + " padded plan preview renders on device",
+            await execute(
+              'return document.querySelectorAll("[data-tile]").length===3&&document.querySelector(".plan-map img").naturalWidth>0;'
+            )
+          );
+          check(
+            language + " AI page processing starts unconsented",
+            await execute(
+              'return !document.getElementsByName("plan.consent")[0].checked;'
+            )
+          );
+          await capture(language + "-plan-preview");
+          await click('[data-plan="discard"]');
+          await execute(
+            'document.querySelector("[data-remove-file]").click();'
+          );
         }
 
         await click('#estimate-form button[type="submit"]');

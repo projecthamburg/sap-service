@@ -1424,5 +1424,18 @@ export function getContent(language, config = {}) {
           Object.entries(value).map(([key, item]) => [key, resolve(item)])
         )
       : value;
-  return resolve(content[language]);
+  const result = resolve(content[language]);
+  const fr = language === "fr";
+  result.booking.with = (fr ? "Avec " : "With ") + operatorName;
+  result.booking.meetingCopy = fr
+    ? "Consultation à distance de 30 minutes. Lundi–vendredi, 9 h–17 h, heure de Montréal. Visites du chantier organisées séparément."
+    : "30-minute remote scope consultation. Monday–Friday, 9 a.m.–5 p.m. Montréal time. Site visits arranged separately.";
+  result.booking.blocked = fr
+    ? "Le calendrier n’a pas pu se charger. Ouvrez-le dans un nouvel onglet ou contactez " +
+      operatorName +
+      "."
+    : "The calendar could not load here. Open it in a new tab or contact " +
+      operatorName +
+      ".";
+  return result;
 }

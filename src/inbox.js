@@ -1,4 +1,4 @@
-import {contextCopy,discoveryFields} from "./client-context.js";
+import { contextCopy, discoveryFields } from "./client-context.js";
 import { icon } from "./icons.js";
 import { escapeHTML as esc, money } from "./utils.js";
 
@@ -37,7 +37,15 @@ const copy = {
     sample: "Test submission",
     loadMore: "Load older submissions",
     notification: "Operator email",
-    emailStates: { queued:"Queued", sending:"Sending", retrying:"Retry scheduled", sent:"Accepted by email provider", failed:"Needs operator attention", suppressed:"Suppressed for test", disabled:"Disabled" },
+    emailStates: {
+      queued: "Queued",
+      sending: "Sending",
+      retrying: "Retry scheduled",
+      sent: "Accepted by email provider",
+      failed: "Needs operator attention",
+      suppressed: "Suppressed for test",
+      disabled: "Disabled",
+    },
   },
   fr: {
     title: "Boîte de réception privée",
@@ -73,7 +81,15 @@ const copy = {
     sample: "Demande de test",
     loadMore: "Charger les demandes précédentes",
     notification: "Courriel à l’opérateur",
-    emailStates: { queued:"En attente", sending:"En cours", retrying:"Nouvel essai prévu", sent:"Accepté par le fournisseur", failed:"Vérification requise", suppressed:"Désactivé pour le test", disabled:"Désactivé" },
+    emailStates: {
+      queued: "En attente",
+      sending: "En cours",
+      retrying: "Nouvel essai prévu",
+      sent: "Accepté par le fournisseur",
+      failed: "Vérification requise",
+      suppressed: "Désactivé pour le test",
+      disabled: "Désactivé",
+    },
   },
 };
 let accessKey = "";
@@ -129,11 +145,31 @@ export function mountInbox(root, language, config, all) {
     if (record.kind === "quote") {
       const scope = payload.estimate.scope,
         result = payload.estimate.estimate;
-      if(payload.estimate.planReview){const review=payload.estimate.planReview;rows.push([language==="fr"?"Vérification du plan":"Plan review",`${review.reference} · ${review.reviewedTileCount}/${review.tiles.length} · ${review.requiresClarification?(language==="fr"?"À clarifier":"Clarification needed"):(language==="fr"?"Vérifié par le visiteur":"Visitor reviewed")}`]);for(const d of review.decisions||[])rows.push([d.conflictId,`${d.resolution}: ${d.reason}`]);}
-      const discovery=contextCopy(language);
-      if(scope.budget>0)rows.push([discovery.budget,money(scope.budget,language)+" CAD"]);
-      if(scope.referredBy)rows.push([discovery.referredBy,scope.referredBy]);
-      for(const key of discoveryFields)if(scope[key])rows.push([discovery[key],scope[key]]);
+      if (payload.estimate.planReview) {
+        const review = payload.estimate.planReview;
+        rows.push([
+          language === "fr" ? "Vérification du plan" : "Plan review",
+          `${review.reference} · ${review.reviewedTileCount}/${
+            review.tiles.length
+          } · ${
+            review.requiresClarification
+              ? language === "fr"
+                ? "À clarifier"
+                : "Clarification needed"
+              : language === "fr"
+              ? "Vérifié par le visiteur"
+              : "Visitor reviewed"
+          }`,
+        ]);
+        for (const d of review.decisions || [])
+          rows.push([d.conflictId, `${d.resolution}: ${d.reason}`]);
+      }
+      const discovery = contextCopy(language);
+      if (scope.budget > 0)
+        rows.push([discovery.budget, money(scope.budget, language) + " CAD"]);
+      if (scope.referredBy) rows.push([discovery.referredBy, scope.referredBy]);
+      for (const key of discoveryFields)
+        if (scope[key]) rows.push([discovery[key], scope[key]]);
       rows.push(
         [all.estimator.city, `${scope.city}, ${scope.province}`],
         [t.area, `${result.totalSqFt} sq ft`],
@@ -184,11 +220,19 @@ export function mountInbox(root, language, config, all) {
       payload.notes || payload.cover || ""
     )}</p>`;
   }
-  let records = [], cursor = null;
+  let records = [],
+    cursor = null;
   async function load(append = false) {
     try {
-      const data = await request("/admin/submissions" + (append && cursor ? "?cursor=" + encodeURIComponent(cursor) : ""));
-      records = append ? [...records, ...data.submissions].filter((r,i,a) => a.findIndex(other=>other.pk===r.pk)===i) : data.submissions;
+      const data = await request(
+        "/admin/submissions" +
+          (append && cursor ? "?cursor=" + encodeURIComponent(cursor) : "")
+      );
+      records = append
+        ? [...records, ...data.submissions].filter(
+            (r, i, a) => a.findIndex((other) => other.pk === r.pk) === i
+          )
+        : data.submissions;
       cursor = data.nextCursor;
       data.submissions = records;
       content.innerHTML = `<div class="inbox-toolbar"><span>${
@@ -219,9 +263,21 @@ export function mountInbox(root, language, config, all) {
                   contact.company ? ` · ${esc(contact.company)}` : ""
                 }</p><small>${t.receipt}: ${new Date(
                   record.receivedAt || record.createdAt
-                ).toLocaleString(all.lang)}</small><p class="fine-print">${t.notification}: ${esc(t.emailStates[record.notification?.state] || record.notification?.state || "—")}${record.notification?.attempts ? ` · ${record.notification.attempts} ${language === "fr" ? "essai(s)" : "attempt(s)"}` : ""}</p><details><summary>${
-                  t.more
-                }${icon("plus")}</summary>${details(record)}</details>${
+                ).toLocaleString(all.lang)}</small><p class="fine-print">${
+                  t.notification
+                }: ${esc(
+                  t.emailStates[record.notification?.state] ||
+                    record.notification?.state ||
+                    "—"
+                )}${
+                  record.notification?.attempts
+                    ? ` · ${record.notification.attempts} ${
+                        language === "fr" ? "essai(s)" : "attempt(s)"
+                      }`
+                    : ""
+                }</p><details><summary>${t.more}${icon(
+                  "plus"
+                )}</summary>${details(record)}</details>${
                   record.files.length
                     ? `<div class="inbox-files"><h3>${
                         t.files
@@ -242,10 +298,18 @@ export function mountInbox(root, language, config, all) {
               })
               .join("")
           : `<p class="inbox-empty">${t.empty}</p>`
-      }</div>${cursor ? `<button type="button" class="button secondary" data-inbox="more">${t.loadMore}</button>` : ""}<p class="fine-print">${t.hint}</p>`;
+      }</div>${
+        cursor
+          ? `<button type="button" class="button secondary" data-inbox="more">${t.loadMore}</button>`
+          : ""
+      }<p class="fine-print">${t.hint}</p>`;
       content.querySelector('[data-inbox="refresh"]').onclick = () => load();
       const more = content.querySelector('[data-inbox="more"]');
-      if (more) more.onclick = () => {more.disabled = true; load(true);};
+      if (more)
+        more.onclick = () => {
+          more.disabled = true;
+          load(true);
+        };
       content.querySelector('[data-inbox="logout"]').onclick = () => {
         accessKey = "";
         login();

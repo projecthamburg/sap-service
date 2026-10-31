@@ -40,3 +40,20 @@ test("handover metadata and no-JavaScript contact use the same supplied contact 
   assert.ok(html.includes(profile.bookingUrl));
   assert.ok(!html.includes("info@projecthamburg.com"));
 });
+test("consultation copy follows the proposal or approved live operator rather than promising Frank attends", async () => {
+  const { getContent } = await import("../src/content.js");
+  const proposal = await loadOperations();
+  for (const language of ["en", "fr"]) {
+    assert.ok(
+      getContent(language, proposal).booking.with.includes("Project Hamburg")
+    );
+    const live = {
+      ...proposal,
+      stage: "live",
+      contact: { name: "Approved SAP operator" },
+    };
+    assert.ok(
+      getContent(language, live).booking.with.includes("Approved SAP operator")
+    );
+  }
+});
