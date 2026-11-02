@@ -368,6 +368,7 @@ try {
     );
     for (const route of ["careers", "privacy", "terms", "inbox"]) {
       await goto("#/" + language + "/" + route);
+      await page.waitForSelector("main h1");
       check(
         `${language}: ${route} route renders`,
         await page.$eval("main", (e) =>
