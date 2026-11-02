@@ -621,6 +621,7 @@ if (!existingOnly) {
   );
 }
 const planVariables = { ...variables, SERVICE_MODE: "plan-review" };
+for(const key of ["COGNITO_POOL_ID","COGNITO_CLIENT_ID","SAP_MAPS_BROWSER_KEY"])delete planVariables[key];
 let planExists = true;
 try {
   await lambda.send(

@@ -300,3 +300,43 @@ test("dossiers escape research text while preserving safe primary-source links",
   assert(html.includes('href="https://www.example.com/research"'));
   assert(html.includes("&lt;script&gt;"));
 });
+
+test("owner legacy CSV accepts contact lists without splitting evidence semicolons", () => {
+  const records = parseCSV(
+    'emails,telephones,source_ids,sources,conflicts\n"one@example.com; two@example.com","111; 222","Engine A; Engine B","Report (chapter 1; appendix A)","Claim A; conflicting claim B"'
+  );
+  assert.deepEqual(records[0].emails, ["one@example.com", "two@example.com"]);
+  assert.deepEqual(records[0].source_ids, ["Engine A", "Engine B"]);
+  assert.deepEqual(records[0].sources, ["Report (chapter 1; appendix A)"]);
+  assert.deepEqual(records[0].conflicts, ["Claim A; conflicting claim B"]);
+});
+
+test("account revocation uses a strongly consistent dedicated key and fails closed", async () => {
+  const { revokedAdmin } = await import("../api/admin-auth.mjs");
+  let input;
+  const db = {
+    send: async (command) => {
+      input = command.input;
+      return { Item: { revoked: true } };
+    },
+  };
+  assert.equal(await revokedAdmin(db, "sap-table", "test-user"), true);
+  assert.equal(input.ConsistentRead, true);
+  assert.equal(input.Key.pk, "ADMIN#REVOKED#test-user");
+  assert.equal(
+    await revokedAdmin({ send: async () => ({}) }, "sap-table", "test-user"),
+    false
+  );
+  assert.equal(
+    await revokedAdmin(
+      {
+        send: async () => {
+          throw Error("Dynamo unavailable");
+        },
+      },
+      "sap-table",
+      "test-user"
+    ),
+    true
+  );
+});

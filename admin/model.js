@@ -129,11 +129,20 @@ export function parseCSV(text) {
             "satellite_sites",
           ].includes(k)
         ) {
-          try {
-            v = JSON.parse(v || "[]");
-          } catch {
-            throw Error(`Row ${i + 2}: ${k} must be a JSON array.`);
-          }
+          const value = v.trim();
+          if (!value) v = [];
+          else if (
+            k === "satellite_sites" ||
+            /^\[\s*(?:["{\d-]|\])/.test(value)
+          ) {
+            try {
+              v = JSON.parse(value);
+            } catch {
+              throw Error(`Row ${i + 2}: ${k} contains an invalid JSON array.`);
+            }
+          } else if (["emails", "telephones", "source_ids"].includes(k))
+            v = value.split(/\s*;\s*/).filter(Boolean);
+          else v = [v]; // Legacy citations contain meaningful internal semicolons; preserve the whole cell.
         } else if (
           [
             "latitude_estimate",

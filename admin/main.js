@@ -164,9 +164,17 @@ export async function mountAdmin(root, language, config, all) {
             },
           });
       }
-      body
-        .querySelectorAll("[data-tool]")
-        .forEach((b) => (b.onclick = () => show(b.dataset.tool)));
+      body.querySelectorAll("[data-tool]").forEach(
+        (b) =>
+          (b.onclick = () => {
+            history.replaceState(
+              null,
+              "",
+              `#/${language}/admin/${b.dataset.tool}`
+            );
+            show(b.dataset.tool);
+          })
+      );
       await show(location.hash.endsWith("/inbox") ? "inbox" : "maps");
     } catch (e) {
       if (!disposed) login(e.message);

@@ -92,6 +92,13 @@ async function save(name) {
   });
   check(name + " DOM coverage", !dom.coverage.truncated);
 }
+async function click(selector) {
+  await page.$eval(selector, (e) =>
+    e.scrollIntoView({ block: "center", behavior: "instant" })
+  );
+  await pause(80);
+  await page.click(selector);
+}
 async function count() {
   return page.$$eval(".lead-row", (v) => v.length);
 }
@@ -107,19 +114,20 @@ try {
     "No leads or inbox exposed before sign-in",
     !(await page.$(".lead-row,.inbox-record"))
   );
-  await page.click(".admin-login [type=submit]");
+  await click(".admin-login [type=submit]");
   check(
     "Incomplete login is blocked",
     await page.$eval("[name=email]", (e) => !e.validity.valid)
   );
   await page.type("[name=email]", account.email);
   await page.type("[name=password]", account.password);
-  await page.click(".admin-login [type=submit]");
+  await click(".admin-login [type=submit]");
   await page.waitForSelector(".lead-results", { timeout: 45000 });
   await page.waitForFunction(
     () => document.querySelectorAll(".lead-row").length > 0,
     { timeout: 30000 }
   );
+  for (let n = 0; n < 100 && !research?.records; n++) await pause(25);
   check(
     "Authenticated real register loaded",
     research?.records?.length === 67 && (await count()) === 67
@@ -162,6 +170,42 @@ try {
       await pause(600);
       await save(`google-${width}-${theme}`);
     }
+  await page.setViewport({ width: 1440, height: 1000 });
+  await page.evaluate(() => (document.documentElement.dataset.theme = "light"));
+  await page.type("[data-search]", "SAP-C005");
+  await click(".lead-row");
+  await page.waitForSelector("dialog[open]");
+  await click("dialog [data-locate]");
+  await page.waitForFunction(
+    () =>
+      document.querySelector("dialog [data-location-status]").textContent
+        .length > 0,
+    { timeout: 30000 }
+  );
+  check(
+    "Live Google address review succeeds",
+    await page.$eval("dialog [data-location-status]", (e) =>
+      e.textContent.includes("Address located by Google")
+    )
+  );
+  await click("dialog [data-street]");
+  await page.waitForFunction(
+    () =>
+      document.querySelector("dialog [data-street-view]").textContent.length >
+      0,
+    { timeout: 30000 }
+  );
+  check(
+    "Street View renders or explains absent coverage",
+    await page.$eval(
+      "dialog [data-street-view]",
+      (e) =>
+        !!e.querySelector(".street-canvas") ||
+        e.textContent.includes("No nearby")
+    )
+  );
+  await click("dialog [data-close]");
+  await click("[data-clear]");
   const api = await page.evaluate(
     () => JSON.parse(document.querySelector("#site-config").textContent).apiUrl
   );
@@ -188,11 +232,11 @@ try {
     "Stale import rejected without overwriting research",
     stale.status === 409
   );
-  await page.click(".tier-controls input[value=Monitor]");
+  await click(".tier-controls input[value=Monitor]");
   check("Monitor toggle leaves 46 leads", (await count()) === 46);
-  await page.click(".tier-controls input[value=Monitor]");
+  await click(".tier-controls input[value=Monitor]");
   for (const key of ["frecon", "axor", "pomerleau", "healthcare"]) {
-    await page.click(`[data-quick=${key}]`);
+    await click(`[data-quick=${key}]`);
     check(
       key + " uses source-aware counts",
       (await count()) ===
@@ -205,15 +249,15 @@ try {
           /published tender close/.test(e.textContent)
         )
       );
-    await page.click("[data-clear]");
+    await click("[data-clear]");
   }
   await page.type("[data-search]", "definitely-no-matching-project");
   check(
     "Empty search is explained",
     (await count()) === 0 && !!(await page.$(".map-empty"))
   );
-  await page.click("[data-clear]");
-  await page.click(".lead-row");
+  await click("[data-clear]");
+  await click(".lead-row");
   await page.waitForSelector("dialog[open]");
   check(
     "Dossier retains citations and conflicts",
@@ -224,19 +268,19 @@ try {
         e.querySelectorAll("details li").length > 0
     )
   );
-  await page.click("dialog [data-pin-anchor]");
+  await click("dialog [data-pin-anchor]");
   check(
     "Selected lead anchors radar",
     await page.$eval("[data-radar-status]", (e) =>
       e.textContent.includes("Map anchor active")
     )
   );
-  await page.click("[data-inside]");
+  await click("[data-inside]");
   check(
     "Radius filter narrows real coordinates",
     (await count()) > 0 && (await count()) < 67
   );
-  await page.click("[data-clear]");
+  await click("[data-clear]");
   await page.select("[data-engine]", "leaflet");
   await page.waitForSelector(".leaflet-pane");
   await pause(1500);
@@ -250,7 +294,7 @@ try {
   await browser
     .defaultBrowserContext()
     .overridePermissions(new URL(base).origin, []);
-  await page.click("[data-gps]");
+  await click("[data-gps]");
   await page.waitForFunction(
     () =>
       document
@@ -275,7 +319,7 @@ try {
     longitude: source.longitude_estimate,
     accuracy: 8,
   });
-  await page.click("[data-gps]");
+  await click("[data-gps]");
   await page.waitForFunction(
     () =>
       document
@@ -289,10 +333,11 @@ try {
       e.textContent.includes("±8 m")
     )
   );
-  await page.click("[data-gps]");
-  await page.click("[data-import]");
+  await click("[data-gps]");
+  await click("[data-import]");
   const bad = resolve(output, "invalid-import.json");
   await writeFile(bad, '[{"lead_id":"INVALID"}]', { mode: 0o600 });
+  await page.waitForSelector("dialog [data-file]");
   await (await page.$("dialog [data-file]")).uploadFile(bad);
   await page.waitForFunction(
     () => document.querySelector("dialog [data-preview]").textContent.length > 0
@@ -307,16 +352,16 @@ try {
       e.textContent.includes("project_name")
     )
   );
-  await page.click("dialog [data-close]");
-  await page.click("[data-settings]");
-  await page.click("dialog [data-analyst]");
-  await page.click("dialog [data-close]");
-  await page.click(".lead-row");
+  await click("dialog [data-close]");
+  await click("[data-settings]");
+  await click("dialog [data-analyst]");
+  await click("dialog [data-close]");
+  await click(".lead-row");
   check(
     "Cancelled settings do not change evidence view",
     await page.$eval("dialog details", (e) => e.open)
   );
-  await page.click("dialog [data-close]");
+  await click("dialog [data-close]");
   for (const width of [1440, 1024, 768, 390])
     for (const theme of ["light", "dark"]) {
       await page.setViewport({ width, height: 1000 });
@@ -342,7 +387,7 @@ try {
         )
     )
   );
-  await page.click("[data-tool=inbox]");
+  await click("[data-tool=inbox]");
   await page.waitForSelector(".inbox-container");
   await page.waitForFunction(
     () =>
@@ -353,7 +398,7 @@ try {
     "Existing inbox uses authenticated session",
     !(await page.$(".inbox-login"))
   );
-  await page.click("[data-logout]");
+  await click("[data-logout]");
   await page.waitForSelector(".admin-login");
   check(
     "Logout removes private UI",
@@ -368,6 +413,8 @@ try {
         )
     )
   );
+  await page.goto(new URL("#/en/", base).href, { waitUntil: "networkidle2" });
+  check("Navigation after sign-out remains functional", await page.$(".hero"));
   check("No runtime errors", errors.length === 0);
 } catch (e) {
   check("Audit completed", false);

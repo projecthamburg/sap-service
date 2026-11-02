@@ -29,7 +29,7 @@ import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createPlanReviewService } from "./plan-review.mjs";
 import { createOutbox, queuedNotification, outboxKey } from "./outbox.mjs";
-import { authenticatedAdmin } from "./admin-auth.mjs";
+import { authenticatedAdmin, revokedAdmin } from "./admin-auth.mjs";
 import { createMapsService } from "./admin-maps.mjs";
 import { validatePayload, validateAttachment } from "./validation.mjs";
 import { restoreState, estimateInput, validateStep } from "../src/model.js";
@@ -305,7 +305,7 @@ export async function handler(event) {
     );
   const identity = await authenticatedAdmin((headers.authorization || "").replace(/^Bearer /, ""));
   const admin = identity
-    ? !(await readRecord("ADMIN#REVOKED#"+identity.id).catch(()=>({revoked:true})))
+    ? !(await revokedAdmin(db,TABLE,identity.id))
     : isAdmin(headers);
   if (path.startsWith("/admin/") && !admin)
     return json({ error: "Unauthorized." }, 401, origin);

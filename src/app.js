@@ -612,7 +612,7 @@ app.addEventListener("click", (event) => {
     store.set("language", language);
     if (activePage !== "home" || /^#\/(?:en|fr)\//.test(location.hash))
       location.hash = `#/${language}/${
-        activePage === "home" ? "" : activePage
+        activePage === "home" ? "" : activePage === "admin" && location.hash.endsWith("/inbox") ? "admin/inbox" : activePage
       }`;
     render(true);
   }

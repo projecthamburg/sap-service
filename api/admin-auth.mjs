@@ -1,3 +1,4 @@
+import { GetCommand } from "@aws-sdk/lib-dynamodb";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 let jwks;
 export async function verifyAdminToken(token, { issuer, clientId, key }) {
@@ -26,4 +27,22 @@ export async function authenticatedAdmin(token) {
   const issuer = `https://cognito-idp.${process.env.AWS_REGION || "ca-central-1"}.amazonaws.com/${pool}`;
   jwks ||= createRemoteJWKSet(new URL(issuer + "/.well-known/jwks.json"));
   return verifyAdminToken(token, { issuer, clientId, key: jwks });
+}
+
+export async function revokedAdmin(db, table, id) {
+  try {
+    return Boolean(
+      (
+        await db.send(
+          new GetCommand({
+            TableName: table,
+            Key: { pk: "ADMIN#REVOKED#" + id },
+            ConsistentRead: true,
+          })
+        )
+      ).Item?.revoked
+    );
+  } catch {
+    return true;
+  }
 }
