@@ -415,12 +415,14 @@ try {
           })
         );
       }
-      if (route === "inbox")
+      if (route === "inbox") {
+        await page.waitForSelector('.admin-login input[type="password"]');
         check(
-          `${language}: inbox requires a private key`,
-          Boolean(await page.$('.inbox-login input[type="password"]')) &&
+          `${language}: inbox requires an invited account`,
+          Boolean(await page.$('.admin-login input[type="password"]')) &&
             !(await page.$(".inbox-record"))
         );
+      }
     }
   }
   await goto("#consultation");

@@ -21,7 +21,7 @@ The dedicated AWS resources are recorded in `api/deployment.json`:
 
 No other application resources are modified. The GitHub role can update only these two dedicated functions and pass only its execution role. OIDC trust is restricted to the immutable identity `repo:projecthamburg@79866271/sap-service@1440106954:environment:production-api`, including GitHub's owner and repository IDs. No broad AWS access keys are held in the repository or its secrets.
 
-Encrypted GitHub secrets are `SAP_ADMIN_TOKEN`, `SAP_RATE_SALT`, `RESEND_API_KEY` and `SAP_PLAN_OPENAI_KEY`. Variables are `SAP_AWS_DEPLOY_ROLE` (notification routing is configured in `config/operations.json`). Initial local provisioning prefers the supplied business AWS credentials and saves the generated application secrets with restrictive permissions in ignored `.local/aws-service-secrets.json`. Do not commit or share that file publicly.
+Encrypted GitHub secrets are `SAP_ADMIN_TOKEN`, `SAP_RATE_SALT`, `RESEND_API_KEY` and `SAP_PLAN_OPENAI_KEY` and `SAP_MAPS_BROWSER_KEY`. Variables are `SAP_AWS_DEPLOY_ROLE` (notification routing is configured in `config/operations.json`). Initial local provisioning prefers the supplied business AWS credentials and saves the generated application secrets with restrictive permissions in ignored `.local/aws-service-secrets.json`. Do not commit or share that file publicly.
 
 ## Requests, applications and files
 
@@ -39,7 +39,7 @@ Public preparations are limited to eight per 15-minute period per hashed IP iden
 
 ## Private inbox
 
-Open `https://projecthamburg.github.io/sap-service/#/en/inbox` (or `#/fr/inbox`). Obtain the operator's private access key from the ignored local secret file, then sign in. The key remains only in that tab's memory and is cleared by Sign out or closing the tab. It is not embedded in the public website, localStorage, a URL or notification messages.
+Open `https://projecthamburg.github.io/sap-service/#/en/admin` (or `#/fr/admin`) and sign in with an invited SAPAdmins account. Maps is the initial tool; Submissions inbox opens the existing private enquiries and applications. Existing `/inbox` links use the same account gate. The previous long operator key remains for emergency API scripts, not normal website login. See [Admin workspace and Maps](admin-maps.md) for accounts, revocation, private research and handover.
 
 The inbox lists received submissions, notification state and private downloads. It loads 100 records per page and offers older pages through an authenticated cursor, so older records remain accessible at higher volumes. `GET /admin/submissions` requires the admin bearer token. `POST /admin/file-url` issues a 60-second signed download URL only for a file attached to the requested received record. Files download as attachments. `DELETE /admin/submissions/<reference>` removes the selected record and its private objects for an authorized deletion request.
 

@@ -650,6 +650,10 @@ export const content = {
       termsTitle: "Estimate terms",
       privacy: [
         [
+          "Private admin workspace",
+          "Invited administrators sign in through AWS Cognito in Canada Central. Authentication tokens are kept in session storage for that browser tab. The opportunity register and its audit history are private operational records, retained until the operator deletes or transfers them; the 90-day enquiry expiry does not apply to that register. Maps uses Google Maps, with an optional OpenStreetMap fallback. Addresses are sent to Google only when an administrator requests an address review. GPS is optional, runs while the tool is open, and is not saved to our server or browser storage. Google location reviews remain in memory for the session and are not included in research exports.",
+        ],
+        [
           "Optional AI plan review",
           "Only if you explicitly opt in, the selected plan page is rendered into overlapping image tiles and sent through private AWS storage to OpenAI for reading printed information. Other pages and files are not sent for that review. Review tiles and the anonymous review job expire after 7 days; processing may occur outside Canada under the provider’s API data policies. A review attached to a submitted enquiry is retained with that enquiry for 90 days. AI readings can be wrong and require your review; they do not automatically change estimate inputs.",
         ],
@@ -1353,6 +1357,10 @@ export const content = {
       termsTitle: "Modalités d’estimation",
       privacy: [
         [
+          "Espace administrateur privé",
+          "Les administrateurs invités se connectent via AWS Cognito dans la région Canada Central. Les jetons de connexion sont conservés dans le stockage de session de l’onglet. Le registre des opportunités et son historique sont des dossiers opérationnels privés conservés jusqu’à leur suppression ou transfert par l’exploitant; l’expiration de 90 jours des demandes ne s’y applique pas. La carte utilise Google Maps et, au choix, OpenStreetMap en secours. Une adresse est transmise à Google uniquement lors d’une vérification demandée par l’administrateur. Le GPS est facultatif, fonctionne pendant l’ouverture de l’outil et n’est enregistré ni sur notre serveur ni dans le navigateur. Les vérifications Google restent en mémoire pour la session et ne figurent pas dans les exports de recherche.",
+        ],
+        [
           "Vérification facultative du plan par IA",
           "Uniquement avec votre consentement explicite, la page choisie est divisée en tuiles avec recouvrement et transmise, via le stockage privé AWS, à OpenAI pour lire les données imprimées. Les autres pages et fichiers ne sont pas transmis pour cette analyse. Les tuiles et le dossier anonyme expirent après 7 jours; le traitement peut avoir lieu hors du Canada selon les politiques API du fournisseur. Une analyse jointe à une demande est conservée avec celle-ci pendant 90 jours. Les lectures peuvent être erronées et doivent être vérifiées; elles ne modifient jamais automatiquement les saisies du calculateur.",
         ],
@@ -1418,12 +1426,12 @@ export function getContent(language, config = {}) {
           .replaceAll("{contactEmail}", contactEmail)
           .replaceAll("{operatorName}", operatorName)
       : Array.isArray(value)
-      ? value.map(resolve)
-      : value && typeof value === "object"
-      ? Object.fromEntries(
-          Object.entries(value).map(([key, item]) => [key, resolve(item)])
-        )
-      : value;
+        ? value.map(resolve)
+        : value && typeof value === "object"
+          ? Object.fromEntries(
+              Object.entries(value).map(([key, item]) => [key, resolve(item)])
+            )
+          : value;
   const result = resolve(content[language]);
   const fr = language === "fr";
   result.booking.with = (fr ? "Avec " : "With ") + operatorName;

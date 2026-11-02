@@ -33,13 +33,14 @@ npm run check         # syntax, asset references and public credential scan
 - Transparent **illustrative** planning assumptions in `src/pricing.js`, local scope saving, JSON export, an actual branded PDF brochure download and formal quotation requests. Measurement plausibility checks require correction or explicit confirmation of unusual values.
 - Five photorealistic illustrative comparisons. They are not presented as completed SAP contracts or transformations of visitor uploads.
 - Careers form with résumé validation, qualifications, consent and a seven-day/four-shift availability grid. Switching languages preserves the application in memory.
+- Invitation-only Admin workspace with a private real-research opportunity map, GPS radar, source dossiers and validated import/export.
 - Real private submissions, direct-to-storage uploads and an authenticated administrative inbox at `#/en/inbox` or `#/fr/inbox`.
 
 ## Private service
 
 AWS Lambda, DynamoDB and a private S3 bucket operate in **Canada Central**. Plans and résumés upload using short-lived, size-restricted signed forms. File signatures and object metadata are checked before a receipt reference is issued. Records expire after 90 days and an S3 lifecycle policy expires the files. Notifications currently go to info@projecthamburg.com through Resend with a durable retry outbox; private files stay in storage. `config/operations.json` centralizes the proposal operator, public contacts, booking URL and future handover channels.
 
-`public/site-config.json` contains only public endpoints. API credentials never enter the browser bundle. Inbox access uses a private key held only in the tab's memory. The operator's key is stored locally in ignored `.local/aws-service-secrets.json`; GitHub holds an encrypted copy for service deployment.
+`public/site-config.json` contains only public endpoints. Server credentials never enter the browser bundle. Admin access uses invitation-only Cognito accounts with API-enforced membership. Tokens stay in the browser tab’s session storage. A restricted Google Maps browser key is delivered only after sign-in; server credentials stay private. The existing emergency operator key remains in ignored `.local/aws-service-secrets.json` and encrypted deployment secrets. See [Admin workspace and Maps](docs/admin-maps.md).
 
 Contact fields, private discovery notes and file bytes are not saved in localStorage. Original attachments transmit after request consent. The separate optional plan review sends only the selected page’s rendered tiles after explicit processor consent; these expire after seven days. It does not transform visitor photographs.
 

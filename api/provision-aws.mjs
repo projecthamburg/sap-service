@@ -133,7 +133,7 @@ if (!existingOnly) {
         {
           Effect: "Allow",
           Action: ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
-          Resource: `arn:aws:s3:::${bucket}/submissions/*`,
+          Resource: [`arn:aws:s3:::${bucket}/submissions/*`,`arn:aws:s3:::${bucket}/admin/maps/*`],
         },
         {
           Effect: "Allow",
@@ -329,7 +329,11 @@ if (!process.env.CI)
     JSON.stringify({ adminToken, rateSalt }) + "\n",
     { mode: 0o600 }
   );
+const adminAuth=JSON.parse(await readFile("public/admin-auth.json","utf8"));
 const variables = {
+  COGNITO_POOL_ID:adminAuth.userPoolId,
+  COGNITO_CLIENT_ID:adminAuth.clientId,
+  SAP_MAPS_BROWSER_KEY:process.env.SAP_MAPS_BROWSER_KEY || "",
   TABLE_NAME: table,
   BUCKET_NAME: bucket,
   ADMIN_TOKEN: adminToken,

@@ -8,7 +8,6 @@ import {
 } from "./utils.js";
 import { Estimator } from "./estimator.js";
 import { mountCareers } from "./careers.js";
-import { mountInbox } from "./inbox.js";
 
 const app = document.getElementById("app");
 installLocalizedValidation(document);
@@ -22,6 +21,9 @@ let activePage = "";
 let estimator;
 let bookingTimer;
 let comparisonObserver;
+let disposeAdmin = () => {};
+let adminGeneration = 0;
+let activeAdminHash = "";
 const photoWidths = {
   "lobby.webp": 1536,
   "construction.webp": 1024,
@@ -109,7 +111,7 @@ function header(t) {
         language === "fr" ? "Navigation principale" : "Main navigation"
       }">${t.nav
     .map((label, i) => `<a href="${t.navLinks[i]}">${label}</a>`)
-    .join("")}<a class="mobile-nav-action" href="#estimate">${
+    .join("")}<a href="#/${language}/admin">Admin</a><a class="mobile-nav-action" href="#estimate">${
     t.getEstimate
   }${icon("diagonal")}</a><a class="mobile-nav-action" href="#consultation">${
     t.book
@@ -428,15 +430,15 @@ function legal(t, page) {
     t.careers.back
   }</a><p class="eyebrow">SAP SERVICE INC.</p><h1>${title}</h1><p class="legal-date">${
     language === "fr"
-      ? "Mise à jour : 30 octobre 2026"
-      : "Updated: October 30, 2026"
+      ? "Mise à jour : 2 novembre 2026"
+      : "Updated: November 2, 2026"
   }</p>${t.legal[page]
     .map(([h, p]) => `<section><h2>${h}</h2><p>${p}</p></section>`)
     .join("")}</main>`;
 }
 function currentPage() {
   return (
-    location.hash.match(/^#\/(?:en|fr)\/(careers|privacy|terms|inbox)/)?.[1] ||
+    location.hash.match(/^#\/(?:en|fr)\/(careers|privacy|terms|inbox|admin)/)?.[1] ||
     "home"
   );
 }
@@ -447,7 +449,7 @@ function render(force = false) {
     force = true;
   }
   const page = currentPage();
-  if (!force && page === activePage) {
+  if (!force && page === activePage && !(page === "admin" && location.hash !== activeAdminHash)) {
     scrollToAnchor();
     return;
   }
@@ -457,11 +459,14 @@ function render(force = false) {
       : null;
   const careerDraft = careerForm ? new FormData(careerForm) : null;
   activePage = page;
+  activeAdminHash = location.hash;
   store.set("language", language);
   const t = getContent(language, config);
   document.documentElement.lang = t.lang;
   document.title = `SAP Service Inc. — ${
-    page === "inbox"
+    page === "admin"
+      ? language === "fr" ? "Espace administrateur" : "Admin workspace"
+      : page === "inbox"
       ? language === "fr"
         ? "Boîte de réception privée"
         : "Private inbox"
@@ -481,18 +486,39 @@ function render(force = false) {
       : "Specialized construction cleaning from rough clean to final handover. SAP Service Inc., Montréal, serving Québec and Ontario.";
   document.querySelector('meta[property="og:locale"]').content =
     language === "fr" ? "fr_CA" : "en_CA";
+  disposeAdmin();
+  disposeAdmin = () => {};
+  const adminRender = ++adminGeneration;
   comparisonObserver?.disconnect();
   clearTimeout(bookingTimer);
   app.innerHTML =
     header(t) +
     (page === "home"
       ? home(t)
-      : page === "careers" || page === "inbox"
+      : page === "careers" || page === "inbox" || page === "admin"
       ? '<main id="main" tabindex="-1"></main>'
       : legal(t, page)) +
     footer(t);
-  if (page === "inbox") {
-    mountInbox(document.getElementById("main"), language, config, t);
+  if (page === "inbox" || page === "admin") {
+    const root = document.getElementById("main");
+    root.innerHTML = `<p class="container" role="status">${language === "fr" ? "Chargement de l’espace privé…" : "Loading private workspace…"}</p>`;
+    if (!document.querySelector("[data-admin-css]")) {
+      const css = document.createElement("link");
+      css.rel = "stylesheet";
+      css.href = "./admin/portal.css";
+      css.dataset.adminCss = "true";
+      document.head.append(css);
+    }
+    import("../admin/portal.js").then(async (module) => {
+      if (adminRender !== adminGeneration) return;
+      const cleanup = await module.mountAdmin(root, language, config, t);
+      if (adminRender === adminGeneration) disposeAdmin = cleanup;
+      else cleanup();
+    }).catch(() => {
+      if (adminRender === adminGeneration) root.textContent = language === "fr"
+        ? "L’espace administrateur ne peut pas charger. Actualisez la page."
+        : "The admin workspace could not load. Please refresh.";
+    });
   } else if (page === "home") {
     if (!estimator) estimator = new Estimator(config);
     estimator.mount(document.getElementById("estimator"), language);

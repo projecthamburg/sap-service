@@ -27,6 +27,7 @@ jobs:
         run: node api/provision-aws.mjs
         env:
           SAP_DEPLOY_EXISTING: "true"
+          SAP_MAPS_BROWSER_KEY: ${{ secrets.SAP_MAPS_BROWSER_KEY }}
           SAP_ADMIN_TOKEN: ${{ secrets.SAP_ADMIN_TOKEN }}
           SAP_RATE_SALT: ${{ secrets.SAP_RATE_SALT }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}

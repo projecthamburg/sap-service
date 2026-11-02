@@ -29,6 +29,8 @@ import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createPlanReviewService } from "./plan-review.mjs";
 import { createOutbox, queuedNotification, outboxKey } from "./outbox.mjs";
+import { authenticatedAdmin } from "./admin-auth.mjs";
+import { createMapsService } from "./admin-maps.mjs";
 import { validatePayload, validateAttachment } from "./validation.mjs";
 import { restoreState, estimateInput, validateStep } from "../src/model.js";
 import { estimate, PRICING } from "../src/pricing.js";
@@ -40,6 +42,7 @@ const db = DynamoDBDocumentClient.from(new DynamoDBClient({ region }), {
 });
 const TABLE = process.env.TABLE_NAME,
   BUCKET = process.env.BUCKET_NAME;
+const mapsService=createMapsService({db,s3,table:TABLE,bucket:BUCKET});
 const allowedOrigins = () =>
   (process.env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim());
 const hash = (value) => createHash("sha256").update(value).digest("hex");
@@ -300,7 +303,10 @@ export async function handler(event) {
       404,
       origin
     );
-  const admin = isAdmin(headers);
+  const identity = await authenticatedAdmin((headers.authorization || "").replace(/^Bearer /, ""));
+  const admin = identity
+    ? !(await readRecord("ADMIN#REVOKED#"+identity.id).catch(()=>({revoked:true})))
+    : isAdmin(headers);
   if (path.startsWith("/admin/") && !admin)
     return json({ error: "Unauthorized." }, 401, origin);
   if (!path.startsWith("/admin/") && !allowedOrigins().includes(origin))
@@ -311,7 +317,7 @@ export async function handler(event) {
       const text = event.isBase64Encoded
         ? Buffer.from(event.body, "base64").toString("utf8")
         : event.body;
-      if (text.length > 120000)
+      if (Buffer.byteLength(text) > (path === "/admin/maps/dataset" && admin ? 4500000 : 120000))
         return json({ error: "Request is too large." }, 413, origin);
       try {
         body = JSON.parse(text);
@@ -327,6 +333,10 @@ export async function handler(event) {
         admin
       );
       return json(response.data, response.status, origin);
+    }
+    if (path.startsWith("/admin/")) {
+      const result = await mapsService(path,method,body,identity || {id:"legacy-operator"});
+      if(result) return json(result.data,result.status || 200,origin);
     }
     if (path === "/admin/submissions" && method === "GET") {
       const cursor =

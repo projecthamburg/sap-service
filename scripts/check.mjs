@@ -8,7 +8,7 @@ const fail = (message) => {
   failed = true;
   console.error(message);
 };
-for (const dir of ["src", "scripts", "api"]) {
+for (const dir of ["src", "scripts", "api", "admin"]) {
   for (const file of await readdir(dir))
     if (/\.(?:mjs|js)$/.test(file)) {
       const result = spawnSync(process.execPath, ["--check", join(dir, file)], {
@@ -72,7 +72,7 @@ async function scan(dir) {
     else if (/\.(?:js|html|json|css|txt|xml|svg)$/.test(path)) {
       const text = await readFile(path, "utf8");
       if (
-        /(?:sk-proj-[a-zA-Z0-9_-]{20,}|gh[pousr]_[a-zA-Z0-9]{20,}|github_pat_[a-zA-Z0-9_]{20,}|AKIA[A-Z0-9]{16}|-----BEGIN (?:RSA )?PRIVATE KEY-----)/.test(
+        /(?:sk-proj-[a-zA-Z0-9_-]{20,}|AIza[\w-]{30,}|gh[pousr]_[a-zA-Z0-9]{20,}|github_pat_[a-zA-Z0-9_]{20,}|AKIA[A-Z0-9]{16}|-----BEGIN (?:RSA )?PRIVATE KEY-----)/.test(
           text
         )
       )

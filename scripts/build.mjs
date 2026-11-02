@@ -8,10 +8,15 @@ import {
   readdir,
 } from "node:fs/promises";
 import { resolve } from "node:path";
-import {buildPlan} from "./build-plan.mjs";
+import { buildAdmin } from "./build-admin.mjs";
+import { buildPlan } from "./build-plan.mjs";
 import { buildPDF } from "./build-pdf.mjs";
 import { createHash } from "node:crypto";
-import { loadPublicConfiguration, loadOperations, configureDocument } from "./configuration.mjs";
+import {
+  loadPublicConfiguration,
+  loadOperations,
+  configureDocument,
+} from "./configuration.mjs";
 const publicConfig =
   JSON.stringify(await loadPublicConfiguration(), null, 2) + "\n";
 const operations = await loadOperations();
@@ -24,6 +29,7 @@ await cp("src", resolve(out, "src"), { recursive: true });
 await copyFile("index.html", resolve(out, "index.html"));
 await buildPDF();
 await buildPlan();
+await buildAdmin();
 // Version every browser module and the public configuration together. This prevents
 // an older cached form module from being mixed with a newly deployed service API.
 const browserFiles = (await readdir("src"))
@@ -32,6 +38,9 @@ const browserFiles = (await readdir("src"))
 const releaseHash = createHash("sha256");
 for (const name of browserFiles)
   releaseHash.update(await readFile(resolve("src", name)));
+for (const name of (await readdir("admin")).sort())
+  releaseHash.update(await readFile(resolve("admin", name)));
+releaseHash.update(await readFile("public/admin-auth.json"));
 releaseHash.update(publicConfig);
 releaseHash.update(await readFile("index.html"));
 releaseHash.update(await readFile("package-lock.json"));
@@ -46,13 +55,19 @@ for (const name of browserFiles.filter((name) => name.endsWith(".js"))) {
     /import\((["'])(\.\/[^"']+\.js)\1\)/g,
     (_, quote, specifier) => `import(${quote}${specifier}?v=${release}${quote})`
   );
+  code = code
+    .replaceAll("../admin/portal.js", `../admin/portal.js?v=${release}`)
+    .replaceAll("./admin/portal.css", `./admin/portal.css?v=${release}`);
   code = code.replace(
     'fetch("./site-config.json")',
     `fetch("./site-config.json?v=${release}")`
   );
   await writeFile(resolve(out, "src", name), code);
 }
-let index = configureDocument(await readFile(resolve(out, "index.html"), "utf8"), operations);
+let index = configureDocument(
+  await readFile(resolve(out, "index.html"), "utf8"),
+  operations
+);
 index = index
   .replace('./src/styles.css"', `./src/styles.css?v=${release}"`)
   .replace('./src/app.js"', `./src/app.js?v=${release}"`)

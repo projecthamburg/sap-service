@@ -93,7 +93,7 @@ const copy = {
   },
 };
 let accessKey = "";
-export function mountInbox(root, language, config, all) {
+export function mountInbox(root, language, config, all, options = {}) {
   const t = copy[language];
   root.innerHTML = `<section class="section"><div class="container inbox-container"><a class="text-link" href="#">← ${
     all.careers.back
@@ -119,12 +119,14 @@ export function mountInbox(root, language, config, all) {
       load();
     });
   }
-  async function request(path, options = {}) {
+  async function request(path, requestOptions = {}) {
+    if (options.request) return options.request(path, requestOptions);
+
     const response = await fetch(config.apiUrl + path, {
-      ...options,
+      ...requestOptions,
       headers: {
         Authorization: `Bearer ${accessKey}`,
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(requestOptions.body ? { "Content-Type": "application/json" } : {}),
       },
       signal: AbortSignal.timeout(20000),
     });
@@ -157,8 +159,8 @@ export function mountInbox(root, language, config, all) {
                 ? "À clarifier"
                 : "Clarification needed"
               : language === "fr"
-              ? "Vérifié par le visiteur"
-              : "Visitor reviewed"
+                ? "Vérifié par le visiteur"
+                : "Visitor reviewed"
           }`,
         ]);
         for (const d of review.decisions || [])
@@ -312,7 +314,8 @@ export function mountInbox(root, language, config, all) {
         };
       content.querySelector('[data-inbox="logout"]').onclick = () => {
         accessKey = "";
-        login();
+        if (options.onLogout) options.onLogout();
+        else login();
       };
       content.querySelectorAll("[data-file-id]").forEach((button) =>
         button.addEventListener("click", async () => {
@@ -342,9 +345,12 @@ export function mountInbox(root, language, config, all) {
         })
       );
     } catch (error) {
-      login(error.message);
+      if (options.request) {
+        content.innerHTML = `<p role="status">${esc(error.message)}</p><button class="button secondary" data-retry>${t.refresh}</button>`;
+        content.querySelector("[data-retry]").onclick = () => load();
+      } else login(error.message);
     }
   }
-  if (accessKey && config.apiUrl) load();
+  if ((options.request || accessKey) && config.apiUrl) load();
   else login();
 }

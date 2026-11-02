@@ -21,7 +21,7 @@ const names = execFileSync(
 const selected = [...new Set(names)]
   .filter(
     (name) =>
-      /^(?:src|scripts)\/.+\.(?:m?js|css)$/.test(name) ||
+      /^(?:src|scripts|admin)\/.+\.(?:m?js|css)$/.test(name) ||
       /^api\/[^/]+\.mjs$/.test(name) ||
       /^\.github\/workflows\/[^/]+\.ya?ml$/.test(name) ||
       [

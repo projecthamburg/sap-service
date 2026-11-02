@@ -49,6 +49,11 @@ const server = http.createServer(async (req, res) => {
     let target = resolve(root, relative);
     if (
       !process.argv.includes("--dist") &&
+      ["admin/portal.js", "admin/portal.css"].includes(relative)
+    )
+      target = resolve(".local/frontend", relative);
+    if (
+      !process.argv.includes("--dist") &&
       ["src/pdf-export.js", "src/plan-review.js"].includes(relative)
     )
       target = resolve(".local/frontend", relative.slice(4));
