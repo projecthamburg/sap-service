@@ -22,7 +22,7 @@ const account = JSON.parse(
 const site =
   process.env.SAP_ADMIN_AUDIT_URL ||
   "https://projecthamburg.github.io/sap-service/";
-const output = resolve(".local/admin-map/devices");
+const output = resolve(process.env.SAP_ADMIN_DEVICE_OUTPUT || ".local/admin-map/devices");
 const expectedRelease =
   process.env.SAP_EXPECT_BUILD ||
   (await readFile("dist/index.html", "utf8")).match(

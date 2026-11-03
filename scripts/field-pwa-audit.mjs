@@ -8,7 +8,9 @@ const base = "https://projecthamburg.github.io/sap-service/",
     await readFile(".local/admin-map/test-account.json", "utf8"),
   ),
   api = JSON.parse(await readFile("api/deployment.json", "utf8")).apiUrl,
-  output = resolve(".local/admin-map/field-pwa-audit");
+  output = resolve(
+    process.env.SAP_FIELD_AUDIT_OUTPUT || ".local/admin-map/field-pwa-audit",
+  );
 await mkdir(output, { recursive: true, mode: 0o700 });
 const browser = await puppeteer.launch({
   executablePath:
@@ -19,6 +21,7 @@ const browser = await puppeteer.launch({
 });
 const checks = [],
   errors = [],
+  networkDiagnostics = [],
   failedRequests = [];
 let bearer, siteId;
 const check = (name, passed) => {
@@ -29,6 +32,19 @@ const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 async function pageFor(app) {
   const p = await browser.newPage();
   p.on("pageerror", (e) => errors.push(e.message));
+  p.on("console", (m) => {
+    if (m.type() === "error" && m.text().includes(new URL(api).hostname))
+      networkDiagnostics.push({
+        console: m.text().replace(/https?:\/\/[^\s"']+/g, (value) => {
+          try {
+            const u = new URL(value);
+            return u.origin + u.pathname;
+          } catch {
+            return "[URL]";
+          }
+        }),
+      });
+  });
   p.on("requestfailed", (r) => {
     const u = new URL(r.url());
     failedRequests.push({
@@ -37,6 +53,12 @@ async function pageFor(app) {
     });
   });
   p.on("request", (r) => {
+    if (r.url().startsWith(api))
+      networkDiagnostics.push({
+        path: new URL(r.url()).pathname,
+        method: r.method(),
+        origin: r.headers().origin || null,
+      });
     if (r.url().startsWith(api) && r.headers().authorization)
       bearer = r.headers().authorization;
   });
@@ -597,7 +619,13 @@ try {
   await writeFile(
     resolve(output, "report.json"),
     JSON.stringify(
-      { checks, errors, failedRequests, at: new Date().toISOString() },
+      {
+        checks,
+        errors,
+        failedRequests,
+        networkDiagnostics,
+        at: new Date().toISOString(),
+      },
       null,
       2,
     ),
