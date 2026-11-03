@@ -1,48 +1,24 @@
-# Verification — November 2, 2026
+# Verification — November 3, 2026
 
-The website is published at https://projecthamburg.github.io/sap-service/. The map app is https://projecthamburg.github.io/sap-service/?workspace=maps#/en/admin/maps. Current build: `6b2d5a9e9066`. Pages [41578092980](https://github.com/projecthamburg/sap-service/actions/runs/41578092980) succeeded. The existing private-service deployment [41557697655](https://github.com/projecthamburg/sap-service/actions/runs/41557697655) remains in use; this cleanup/full-screen release changes no API infrastructure. Earlier accepted releases, including the nine-configuration baseline, are retained in [verification history](verification-history.md).
+Current build: `a7fc48499a9c`. The [website](https://projecthamburg.github.io/sap-service/) and [demo entry](https://projecthamburg.github.io/sap-service/?demo=1#/en/admin) are published. [Pages deployment 41656397995](https://github.com/projecthamburg/sap-service/actions/runs/41656397995) and [private-service deployment 41656397868](https://github.com/projecthamburg/sap-service/actions/runs/41656397868) succeeded. The earlier public intake, field/PWA and eleven-configuration device matrix remain recorded in [verification history](verification-history.md).
 
-## Delivered and checked
+## Shared demo access
 
-- Compact field cards put driving/contact links and visit actions first. Notes and project details expand on demand; the nested original record retains all research, qualifications, identifiers and sources. No underlying research was deleted. Legacy research-view preferences no longer force cards open on first use.
-- The map app offers native full screen where supported, an expanded-map fallback, a visible exit, and responsive portrait/landscape layouts with cutout insets. The map fills the area above the phone site sheet. Standalone maps accept one-finger movement; overlapping extra Google camera/Street View controls are removed there. Street View remains available in project details.
-- Permission-denied location opens visible guidance and sets a concise unavailable state. Temporary session/data read failures offer explicit Retry controls; a connection failure does not discard an otherwise valid session. Mutations and forms are never automatically resubmitted.
-- 99 Node tests pass, including four presentation tests alongside existing estimator, uploads, PDF, authentication, research, idempotency and field concurrency coverage. Pages repeats tests, build validation and public-credential checks.
-- 103 public Chrome checks pass. Pages also repeats public Domscan across eight language/theme/width states.
-- 57 authenticated Chrome checks pass, including real research counts, filters, full records, invalid imports, settings cancellation, both themes, responsive layouts, fallback, Inbox and sign-out. A separate visual audit passed 49 checks across three real cards at phone/desktop widths in both themes, including retained records and sticky driving actions.
-- 68 field/PWA checks pass on the final staged assets under the approved Pages origin, using the actual private service and isolated synthetic field observations. Coverage includes denied/allowed GPS, visible help, exact mile options, incomplete capture, private save, Visited → Will return → Open, current-origin driving, eight layouts, full-screen entry/exit/fallback, six full-screen size/inset cases, actual canvas bounds, both session/data retry paths, persistence, one-/two-mile boundary behavior, layers and deletion of the synthetic site.
-- 13 public-shell PWA checks pass on live build `6b2d5a9e9066`: installability, manifest/icons, worker scope, public-only cache, offline guidance and reconnect. The earlier 16 native Chrome-window resize cases remain applicable to the unchanged sign-in layout; they record actual window/viewport dimensions, measured-header centering and short-window scrolling.
+The demo displays username `demo`, uses a permanent password, sends no invitation email and requires no first-login password change. Its reserved internal identifier has no verified delivery/recovery mailbox. Credentials remain outside the repository and URLs. Both `SAPAdmins` and `SAPDemo` membership are required when provisioning this account.
 
-## Real-device acceptance
+The signed demo role allows only GET session, map configuration and the researched register. Live saved field sites and visit notes are omitted. Private submissions/files and every privileged mutation are denied server-side, even with the test header. Demo UI saving/import controls are disabled and Inbox explains that private files are unavailable. The map uses the existing real research rather than invented opportunities. Display preferences, search, directions, map layers and location remain available.
 
-The complete BrowserStack matrix passed **408 checks, zero failed, across eleven configurations on build `24c985ed9e8b`**. Each session verified that public build and closed successfully. The existing one-slot plan was used sequentially. Coverage includes both themes, compact cards, account/error flows, real research, normal admin and standalone maps, full-screen/fallback/exit, canvas bounds, location/layers, install guidance, sign-out and French sign-in.
+The demo link does not render a previously signed-in staff workspace: it returns to the demo sign-in without requesting staff maps or Inbox data. The demo Maps manifest retains its own demo start URL. Public customer/application forms remain actual forms; this is a read-only admin demonstration, not a sandbox for submitting public forms.
 
-| Configuration | Passed checks |
-| --- | ---: |
-| iPhone Safari portrait | 39 |
-| iPhone Safari landscape | 36 |
-| Android Chrome portrait | 39 |
-| Android Chrome landscape | 39 |
-| iPad Safari portrait | 36 |
-| iPad Safari landscape | 36 |
-| Android tablet portrait | 39 |
-| Android tablet landscape | 36 |
-| Mac Safari | 36 |
-| Windows Chrome | 36 |
-| Windows Firefox | 36 |
+## Accepted checks
 
-The follow-up `6b2d5a9e9066` changes two CSS rules limited to short, wide map workspaces: inset the site list and constrain wide dialogs around device cutouts. With zero horizontal insets, positions/widths are unchanged; these rules are inactive on tall/portrait layouts. **36 additional live iPhone landscape checks passed on this follow-up**, including explicit list and install-dialog inset bounds. The full 68-check staged field suite also passed on the current assets. The 408-check matrix and targeted follow-up remain distinct; they are not represented as eleven new runs on the follow-up build.
+- 101 Node tests passed, including signed demo-role claims, a strict method/path allowlist, no field-index queries for demo data, and prevention of private reads or mutations. Existing estimator, PDF, upload, authorization and concurrency tests remain.
+- 103 public Chrome checks and eight public Domscan states passed in Pages Actions.
+- 13 live API checks passed: permanent-password sign-in without email/reset/MFA, signed demo identification, all 67 research records with empty field/activity data, direct private/write-route rejection, test-header isolation, unchanged dataset version and confirmed/no-verified-mailbox status.
+- 29 Chrome demo checks passed: literal username/no recovery action, no password-change challenge, real Google map, read-only cards, private Inbox placeholder with no submissions fetch, separate installable demo manifest, desktop/phone/tablet portrait/landscape in both themes, no privileged UI writes, sign-out and no runtime errors.
+- A separate Chrome check passed for a signed-in staff session opening the shared demo link, without private data requests or rendering.
+- 57 normal staff-admin regression checks passed, including full Inbox access and normal imports/conflicts. The disposable staff audit fixture was revoked afterwards; its existing token changed from HTTP 200 to 401. Owner and named staff accounts were unchanged. The permanent demo remains enabled for sharing.
 
-All task-owned cloud sessions closed. The disposable audit account was revoked after testing: a valid access token changed from HTTP 200 to 401 immediately. The owner account/password were unchanged.
+Authenticated evidence stays privately under `.local/admin-demo/`. No emails, application submissions or bookings were generated during this demo setup. Existing business AWS resources were reused; no new always-on infrastructure was introduced.
 
-## Evidence and limits
-
-Blueprint reconciles 72 selected source files, 1,499 entities and 503 named ES-module call bindings. The source/runtime evidence join covers eight public Domscan states and four brand consumers, with source hashes. Canonical logo comparison remains IoU 0.9765. Authenticated DOM captures, screenshots, research and credentials remain private; public Actions artifacts contain only public-page evidence.
-
-Screenshot inspection found a blank portrait-map band caused by an inherited `max-height: 60dvh`, plus covered SDK controls. Geometry tests now check the actual map canvas, alongside panel intersections. Review also caught location help present only in a clipped live region, and a transient session connection failure that incorrectly returned to raw-error sign-in. Both have visible recovery flows. Transport-abort attempts and their subsequent network failures are retained privately; deterministic read-failure tests inject a one-shot fetch rejection at the browser boundary, then recover through the actual UI and real service. No research response is fabricated for acceptance.
-
-The owner confirmed installation on their Android phone. Real Safari/device browser testing of the standalone entry does **not** certify a physical iPhone/iPad Home Screen installation. Native full-screen support differs by platform; unsupported browsers expand the map within available space. Apple Home Screen installation remains a separate physical-device acceptance item. Simulated safe-area insets are geometry evidence, not that installation test.
-
-Keep the app open for reliable GPS/nearby alerts. No guaranteed locked-screen/background tracking is claimed. External Google Maps handles car navigation. Radius membership uses straight-line distance, not road-route length. GPS travel history is not stored; only explicitly saved locations/capture metadata and visit notes persist. The 67 records remain dated owner-supplied research, not guaranteed open contracts or an automatic discovery feed. Field observations remain commercially unqualified. Private data and map services need connectivity.
-
-The existing business AWS account in Canada Central continues to use the on-demand table, S3 and Lambda. No always-on field-tracking infrastructure was added. No scheduler tenants, statuses or unapproved artwork were changed. See [Admin Maps](admin-maps.md), [audit protocol](audit-protocol.md), [handover](handover.md) and [cost assumptions](cost-estimate.md).
+The existing platform limits remain: the owner confirmed Android installation; a physical Apple Home Screen installation is unverified. Nearby alerts require the app open and connectivity, without guaranteed background/locked-screen tracking. Research records are dated prospects, not guaranteed contracts. See [Admin Maps](admin-maps.md), [handover](handover.md) and the [audit protocol](audit-protocol.md).

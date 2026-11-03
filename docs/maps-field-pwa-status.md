@@ -1,6 +1,6 @@
 # Maps and field app — November 2, 2026
 
-The owner authorized resumption after the saved pause. The Admin/Maps release is published at https://projecthamburg.github.io/sap-service/#/en/admin. The standalone entry is https://projecthamburg.github.io/sap-service/?workspace=maps#/en/admin/maps. The latest field/PWA build is `6b2d5a9e9066`; use [verification](verification.md) for the exact accepted Actions/device results. The previous paused frontend checkpoint has been integrated and superseded.
+The owner authorized resumption after the saved pause. The Admin/Maps release is published at https://projecthamburg.github.io/sap-service/#/en/admin. The standalone entry is https://projecthamburg.github.io/sap-service/?workspace=maps#/en/admin/maps. The current build is `a7fc48499a9c`, adding a separate read-only demo login; use [verification](verification.md) for the exact accepted Actions/device results. The previous paused frontend checkpoint has been integrated and superseded.
 
 ## Delivered
 
