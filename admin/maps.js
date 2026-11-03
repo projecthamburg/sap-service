@@ -103,6 +103,21 @@ export function mountMaps(root, { request, language }) {
   function message(s) {
     if (!disposed) status.textContent = s;
   }
+  function locationIssue(text) {
+    message(text);
+    if (!isMapsApp()) return;
+    q("[data-radar-status]").textContent = w(
+      "Location unavailable",
+      "Position indisponible"
+    );
+    dialog(
+      w("Location access", "Accès à la position"),
+      `<p>${esc(text)}</p><button class="button primary" data-location-help-close>${w("Got it", "Compris")}</button>`,
+      (d) => {
+        d.querySelector("[data-location-help-close]").onclick = () => d.close();
+      }
+    );
+  }
   const disposeFullscreen = isMapsApp()
     ? bindMapFullscreen(
         root.closest(".admin-portal")?.querySelector("[data-map-fullscreen]"),
@@ -883,10 +898,10 @@ export function mountMaps(root, { request, language }) {
       return;
     }
     if (!navigator.geolocation) {
-      message(
+      locationIssue(
         w(
-          "Geolocation is unavailable. Use a map anchor.",
-          "Géolocalisation indisponible. Utilisez le centre de la carte."
+          "This browser cannot share a location. You can still browse sites and open driving directions.",
+          "Ce navigateur ne peut pas partager votre position. Vous pouvez consulter les sites et ouvrir un itinéraire."
         )
       );
       return;
@@ -954,15 +969,20 @@ export function mountMaps(root, { request, language }) {
       (e) => {
         if (disposed || run !== gpsGeneration) return;
         stopGPS();
-        message(
+        locationIssue(
           e.code === 1
-            ? w(
-                "Location permission denied. Choose “Use map centre” for a manual anchor; no position has been simulated.",
-                "Accès à la position refusé. Utilisez le centre de la carte; aucune position simulée."
-              )
+            ? isMapsApp()
+              ? w(
+                  "Location permission denied. Allow location for this site in your browser or device settings, then tap My location again. You can still browse sites and open driving directions.",
+                  "Accès à la position refusé. Autorisez la position pour ce site dans les réglages du navigateur ou de l’appareil, puis réessayez. Vous pouvez consulter les sites et ouvrir un itinéraire."
+                )
+              : w(
+                  "Location permission denied. Choose “Use map centre” for a manual anchor; no position has been simulated.",
+                  "Accès à la position refusé. Utilisez le centre de la carte; aucune position simulée."
+                )
             : w(
-                "Location unavailable. Try again or use the map centre.",
-                "Position indisponible. Réessayez ou utilisez le centre de la carte."
+                "Location is unavailable right now. Check that device location is enabled, then try My location again. You can still browse sites and open driving directions.",
+                "Position indisponible pour le moment. Vérifiez que la localisation de l’appareil est activée, puis réessayez. Vous pouvez consulter les sites et ouvrir un itinéraire."
               )
         );
       },

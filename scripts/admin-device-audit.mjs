@@ -465,6 +465,12 @@ for (const device of matrix) {
         'return ["[data-my-location]","[data-layers]",".map-focus-exit"].every(s=>{const r=document.querySelector(s).getBoundingClientRect();return r.width>=44&&r.height>=44&&r.top>=0&&r.bottom<=innerHeight})'
       )
     );
+    check(
+      "Map canvas fills the expanded workspace",
+      await exec(
+        'const c=document.querySelector(".map-canvas").getBoundingClientRect(),s=document.querySelector(".lead-sidebar").getBoundingClientRect(),b=parseFloat(getComputedStyle(document.body).getPropertyValue("--map-safe-bottom"))||0;return Math.abs(c.top)<1&&Math.abs(c.bottom-(innerWidth<=760?s.top:innerHeight-b))<2'
+      )
+    );
     await capture("pwa-fullscreen");
     await click(".map-focus-exit");
     await wait('return !document.body.classList.contains("map-focus")');

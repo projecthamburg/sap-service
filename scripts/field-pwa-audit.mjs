@@ -194,9 +194,20 @@ try {
   check(
     "Location denial is explained without an invented position",
     await p.$eval("[data-radar-status]", (e) =>
-      e.textContent.includes("GPS off"),
+      e.textContent.includes("Location unavailable"),
     ),
   );
+  check(
+    "Denied location offers visible settings guidance with an accessible exit",
+    await p.$eval(
+      "dialog[open]",
+      (e) =>
+        e.getBoundingClientRect().height > 0 &&
+        e.textContent.includes("browser or device settings") &&
+        !!e.querySelector("[data-location-help-close]"),
+    ),
+  );
+  await click(p, "[data-location-help-close]");
   await browser
     .defaultBrowserContext()
     .overridePermissions(new URL(base).origin, ["geolocation"]);
