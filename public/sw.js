@@ -47,7 +47,7 @@ self.addEventListener("fetch", (event) => {
   const path = url.pathname.slice(root.pathname.length);
   const publicAsset =
     /^(?:src|admin|fonts|brand)\//.test(path) ||
-    ["site-config.json", "index.html", "manifest.webmanifest", ""].includes(
+    ["site-config.json", "index.html", "manifest.webmanifest", "manifest-demo.webmanifest", ""].includes(
       path
     );
   if (request.mode === "navigate") {

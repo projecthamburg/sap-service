@@ -21,7 +21,7 @@ export async function token() {
     user.getSession((e, s) => {
       if (e || !s?.isValid())
         return reject(Error("Your session expired. Please sign in."));
-      label = s.getIdToken().payload.email;
+      label = s.getIdToken().payload.email === "demo@sap-service.invalid" ? "Demo" : s.getIdToken().payload.email;
       resolve(s.getAccessToken().getJwtToken());
     })
   );
@@ -48,14 +48,15 @@ function callbacks(resolve, reject) {
   };
 }
 export async function signIn(email, password) {
+  const username = email.toLowerCase() === "demo" ? "demo@sap-service.invalid" : email;
   user = new CognitoUser({
-    Username: email,
+    Username: username,
     Pool: pool,
     Storage: sessionStorage,
   });
   return new Promise((resolve, reject) =>
     user.authenticateUser(
-      new AuthenticationDetails({ Username: email, Password: password }),
+      new AuthenticationDetails({ Username: username, Password: password }),
       callbacks(resolve, reject)
     )
   );

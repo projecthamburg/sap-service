@@ -31,7 +31,7 @@ import {
 import { googleMaps } from "./google.js";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-export function mountMaps(root, { request, language }) {
+export function mountMaps(root, { request, language, readOnly = false }) {
   const fr = language === "fr",
     w = (a, b) => (fr ? b : a);
   let researchRecords = [],
@@ -99,6 +99,13 @@ export function mountMaps(root, { request, language }) {
       .forEach((b) =>
         b.setAttribute("aria-pressed", String(b.dataset.layout === "map"))
       );
+  }
+  if (readOnly) {
+    q("[data-search]").placeholder = w("Demo: search sites", "Démo : chercher un site");
+    for (const b of root.querySelectorAll("[data-import], .map-app-import")) {
+      b.disabled = true;
+      b.title = w("Read-only demo", "Démo en lecture seule");
+    }
   }
   function message(s) {
     if (!disposed) status.textContent = s;
@@ -337,7 +344,7 @@ export function mountMaps(root, { request, language }) {
   }
   function paintRadar() {
     q("[data-stop]").disabled = !radarOn;
-    q("[data-add-site]").disabled = !position;
+    q("[data-add-site]").disabled = readOnly || !position;
     if (radarShape) {
       engine === "google" ? radarShape.setMap(null) : radarShape.remove();
       radarShape = null;
@@ -392,7 +399,7 @@ export function mountMaps(root, { request, language }) {
       }).addTo(map);
       if (position) beacon.on("click", openMyLocation);
     }
-    q("[data-add-site]").disabled = !position;
+    q("[data-add-site]").disabled = readOnly || !position;
   }
   function openMyLocation() {
     if (!position) {
@@ -424,7 +431,10 @@ export function mountMaps(root, { request, language }) {
               openLead(b.dataset.existingSite);
             })
         );
+        d.querySelector("[data-record-location]").disabled = readOnly;
+        d.querySelector("[data-record-location]").title = readOnly ? w("Read-only demo", "Démo en lecture seule") : "";
         d.querySelector("[data-record-location]").onclick = () => {
+          if (readOnly) return;
           d.close();
           addFieldSite(fix);
         };
@@ -432,6 +442,7 @@ export function mountMaps(root, { request, language }) {
     );
   }
   function addFieldSite(fix) {
+    if (readOnly) return;
     dialog(
       w("Add a field site", "Ajouter un site terrain"),
       `<form data-new-site><p>${w("This saves a site observation at the selected GPS position. Your travel history is not recorded.", "Cette action enregistre une observation à la position GPS choisie. Votre historique de déplacement n’est pas enregistré.")}</p><p class="fine-print">${fix.lat.toFixed(6)}, ${fix.lng.toFixed(6)} · ±${Math.round(fix.accuracy)} m</p><label class="field"><span>${w("Site name *", "Nom du site *")}</span><input name="name" required minlength="3" maxlength="180" placeholder="${w("e.g. Renovation on Notre-Dame", "Ex. Rénovation sur Notre-Dame")}"></label><label class="field"><span>${w("Address, if known", "Adresse, si connue")}</span><input name="address" maxlength="300" autocomplete="street-address"></label><div class="field-form-grid"><label class="field"><span>${w("City", "Ville")}</span><input name="city" maxlength="300"></label><label class="field"><span>Province</span><select name="province"><option value="">${w("To confirm", "À confirmer")}</option><option value="QC">Québec</option><option value="ON">Ontario</option></select></label></div><label class="field"><span>${w("Contractor, if known", "Entrepreneur, si connu")}</span><input name="contractor" maxlength="300"></label><label class="field"><span>${w("What did you observe? / next steps", "Observations / prochaines étapes")}</span><textarea name="notes" maxlength="4000" rows="3"></textarea></label>${fix.accuracy > 200 ? `<label class="check-line"><input type="checkbox" name="confirmLocation" required> ${w("GPS accuracy is low. I confirm this is the site location.", "Le GPS est imprécis. Je confirme la position du site.")}</label>` : ""}<p role="status" data-save-status></p><button class="button primary" type="submit">${w("Save site", "Enregistrer le site")}</button></form>`,
@@ -649,6 +660,10 @@ export function mountMaps(root, { request, language }) {
           d.querySelector("[data-card-address]"),
           d.querySelector("[data-card-actions]")
         );
+        if (readOnly) {
+          for (const control of d.querySelectorAll("[data-set-visit], [data-visit-notes]")) control.disabled = true;
+          d.querySelector("[data-work-status]").textContent = w("Demo: visits and notes cannot be saved.", "Démo : les visites et notes ne peuvent pas être enregistrées.");
+        }
         const cardHeaderObserver = new ResizeObserver(() =>
           d.style.setProperty(
             "--site-header-height",
@@ -662,6 +677,7 @@ export function mountMaps(root, { request, language }) {
         d.querySelectorAll("[data-set-visit]").forEach(
           (b) =>
             (b.onclick = async () => {
+              if (readOnly) return;
               const status = d.querySelector("[data-work-status]");
               d.querySelectorAll("[data-set-visit]").forEach(
                 (button) => (button.disabled = true)
@@ -961,7 +977,7 @@ export function mountMaps(root, { request, language }) {
             ? map.panTo(position)
             : map.panTo([position.lat, position.lng], { animate: false });
         }
-        q("[data-add-site]").disabled = false;
+        q("[data-add-site]").disabled = readOnly;
         if (insideOnly) refresh();
         else {
           updateDistanceLabels();
@@ -1149,6 +1165,7 @@ export function mountMaps(root, { request, language }) {
       `<label class="check-line"><input type="checkbox" data-analyst ${analyst ? "checked" : ""}> ${w("Show full project records", "Afficher les dossiers complets")}</label><p>${w("Keep full records folded for everyday visits. Display preferences stay on this device.", "Gardez les dossiers repliés pour les visites courantes. Les préférences d’affichage restent sur cet appareil.")}</p><label class="field"><span>${w("Construction marker", "Repère de chantier")}</span><select data-marker-style><option value="building">${w("Building pin", "Bâtiment")}</option><option value="hardhat">${w("Hard-hat pin", "Casque de chantier")}</option><option value="crane">${w("Crane pin", "Grue")}</option></select></label><label class="check-line"><input type="checkbox" data-keep-awake ${prefs.keepAwake ? "checked" : ""} ${!navigator.wakeLock ? "disabled" : ""}> ${w("Keep screen awake while nearby alerts are on", "Garder l’écran allumé pendant les alertes de proximité")}</label><button class="button secondary" type="button" data-enable-device-alerts>${w("Enable device notifications", "Activer les notifications système")}</button><button class="button secondary" type="button" data-open-import>${w("Import or back up site data", "Importer ou sauvegarder les sites")}</button><button class="button primary" data-apply>${w("Apply & close", "Appliquer et fermer")}</button>`,
       (d) => {
         d.querySelector("[data-marker-style]").value = markerStyle;
+        d.querySelector("[data-open-import]").disabled = readOnly;
         d.querySelector("[data-enable-device-alerts]").onclick = () =>
           q("[data-notifications]").click();
         d.querySelector("[data-open-import]").onclick = () => {

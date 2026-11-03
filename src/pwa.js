@@ -10,6 +10,12 @@ export const isMapsApp = () =>
   new URLSearchParams(location.search).get("workspace") === "maps" ||
   matchMedia("(display-mode: standalone)").matches;
 export async function prepareMapsApp() {
+  const demo = new URLSearchParams(location.search).get("demo") === "1" || document.body.classList.contains("demo-session");
+  const manifest = document.querySelector('link[rel="manifest"]'), href = demo ? "./manifest-demo.webmanifest" : "./manifest.webmanifest";
+  if (manifest && manifest.getAttribute("href") !== href) {
+    window.sapMapsInstallPrompt = null;
+    manifest.setAttribute("href", href);
+  }
   if (isMapsApp())
     document
       .querySelector('meta[name="viewport"]')
@@ -35,6 +41,7 @@ export async function installMapsApp() {
 export function launchMapsApp(language = "en") {
   const url = new URL("./", location.href);
   url.searchParams.set("workspace", "maps");
+  if (new URLSearchParams(location.search).get("demo") === "1" || document.body.classList.contains("demo-session")) url.searchParams.set("demo", "1");
   url.hash = `/${language}/admin/maps`;
   const app = window.open(
     url.href,

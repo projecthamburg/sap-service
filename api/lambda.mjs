@@ -29,7 +29,7 @@ import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createPlanReviewService } from "./plan-review.mjs";
 import { createOutbox, queuedNotification, outboxKey } from "./outbox.mjs";
-import { authenticatedAdmin, revokedAdmin } from "./admin-auth.mjs";
+import { authenticatedAdmin, revokedAdmin, adminRequestAllowed } from "./admin-auth.mjs";
 import { createMapsService } from "./admin-maps.mjs";
 import { validatePayload, validateAttachment } from "./validation.mjs";
 import { restoreState, estimateInput, validateStep } from "../src/model.js";
@@ -309,6 +309,8 @@ export async function handler(event) {
     : isAdmin(headers);
   if (path.startsWith("/admin/") && !admin)
     return json({ error: "Unauthorized." }, 401, origin);
+  if (!adminRequestAllowed(identity, path, method))
+    return json({ error: "This demo is read-only. Private submissions and live changes are unavailable." }, 403, origin);
   if (!path.startsWith("/admin/") && !allowedOrigins().includes(origin))
     return json({ error: "Origin not allowed." }, 403);
   try {

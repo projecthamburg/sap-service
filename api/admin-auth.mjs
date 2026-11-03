@@ -15,10 +15,20 @@ export async function verifyAdminToken(token, { issuer, clientId, key }) {
       typeof payload.sub !== "string"
     )
       return null;
-    return { id: payload.sub, username: payload.username };
+    return {
+      id: payload.sub,
+      username: payload.username,
+      ...(payload["cognito:groups"].includes("SAPDemo") ? { demo: true } : {}),
+    };
   } catch {
     return null;
   }
+}
+
+export function adminRequestAllowed(actor, path, method) {
+  return !actor?.demo || (method === "GET" && [
+    "/admin/session", "/admin/maps/config", "/admin/maps/dataset",
+  ].includes(path));
 }
 export async function authenticatedAdmin(token) {
   const pool = process.env.COGNITO_POOL_ID,

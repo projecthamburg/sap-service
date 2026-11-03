@@ -1,4 +1,5 @@
 import { createFieldService } from "./map-field.mjs";
+import { adminRequestAllowed } from "./admin-auth.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { GetCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -30,11 +31,13 @@ export function createMapsService({ db, s3, table, bucket }) {
       (await readResearch()).some((r) => r.lead_id === id),
   });
   return async (path, method, body, actor, options = {}) => {
-    const operational = await field.handle(path, method, body, actor, options);
+    if (!adminRequestAllowed(actor, path, method))
+      return { status: 403, data: { error: "This demo is read-only. Private submissions and live changes are unavailable." } };
+    const operational = !actor.demo && await field.handle(path, method, body, actor, options);
     if (operational) return operational;
     if (path === "/admin/session" && method === "GET")
       return {
-        data: { authenticated: true, user: actor.username || "Operator" },
+        data: { authenticated: true, user: actor.demo ? "Demo" : actor.username || "Operator", ...(actor.demo ? { demo: true } : {}) },
       };
     if (path === "/admin/maps/config" && method === "GET")
       return {
@@ -43,12 +46,13 @@ export function createMapsService({ db, s3, table, bucket }) {
     if (path !== "/admin/maps/dataset") return null;
     const current = await read();
     if (method === "GET") {
+      const fieldSnapshot = actor.demo ? { fieldSites: [], activity: {} } : await field.snapshot(options.test);
       if (!current)
         return {
           data: {
             records: [],
             version: null,
-            ...(await field.snapshot(options.test)),
+            ...fieldSnapshot,
           },
         };
       const object = await s3.send(
@@ -57,7 +61,7 @@ export function createMapsService({ db, s3, table, bucket }) {
       return {
         data: {
           records: JSON.parse(await object.Body.transformToString()),
-          ...(await field.snapshot(options.test)),
+          ...fieldSnapshot,
           version: current.version,
           updatedAt: current.updatedAt,
           source: current.source,

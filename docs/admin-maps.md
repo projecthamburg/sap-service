@@ -4,6 +4,10 @@ The Admin link opens `#/en/admin` or `#/fr/admin`. Maps is the initial tool; Sub
 
 ## Accounts and authorization
 
+The shareable demo entry is `?demo=1#/en/admin`, with the displayed username `demo`. Its internal sign-in identifier is reserved and has no mailbox. Provision it with both `SAPAdmins` and `SAPDemo`, suppress invitation delivery, and set a permanent password. Keep that password outside the repository and URLs. Do not provision the shared demo as an unrestricted staff account. Ordinary staff accounts retain their invitation/password-change flow.
+
+The server recognizes demo membership from the signed access token. It allows only GET session, map configuration and the research register; it omits live field observations/activity and denies private submissions, file routes and every privileged mutation, including requests using the test header. The interface identifies the read-only demo and disables saving/importing. The demo Maps launcher has its own manifest/start URL so it retains the demo sign-in entry. Public enquiry/application forms remain real public forms; the demo restrictions apply to administrative access.
+
 Authentication uses the SAP-only Amazon Cognito user pool in Canada Central. There is no public registration. The browser uses SRP; passwords are not sent to the SAP API. Access tokens last 15 minutes and can refresh within a one-day session. The SDK stores tokens in sessionStorage for the browser tab. Sign out clears the tokens and private interface, stops GPS and releases map resources.
 
 The API verifies the Cognito signature, issuer, client ID, access-token type and SAPAdmins group. A signed-in account outside that group has no admin access. Public client IDs in `public/admin-auth.json` are identifiers, not credentials. All members of SAPAdmins have both Maps and Inbox access; this release does not create a separate field-only permission level.

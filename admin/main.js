@@ -31,6 +31,7 @@ export async function mountAdmin(root, language, config, all) {
   prepareMapsApp();
   root.innerHTML = `<section class="admin-shell"><p class="eyebrow">SAP SERVICE INC. / ${w("OPERATIONS", "OPÉRATIONS")}</p><h1>${w("Your workspace.", "Votre espace de travail.")}</h1><div id="admin-body" role="region" aria-label="Admin"><p role="status">${w("Connecting securely…", "Connexion sécurisée…")}</p></div></section>`;
   const body = root.querySelector("#admin-body");
+  const demoEntry = new URLSearchParams(location.search).get("demo") === "1";
   const connectionError = (e) =>
     !navigator.onLine ||
     ["TypeError", "TimeoutError", "NetworkError"].includes(e.name) ||
@@ -95,7 +96,8 @@ export async function mountAdmin(root, language, config, all) {
   }
   function login(message = "") {
     if (disposed) return;
-    body.innerHTML = `<form class="admin-login"><h1>${w("Admin sign-in", "Connexion administrateur")}</h1><p>${w("Invited team members only.", "Réservé aux membres invités.")}</p><label class="field"><span>${w("Email", "Courriel")}</span><input name="email" type="email" autocomplete="username" required></label><label class="field"><span>${w("Password", "Mot de passe")}</span><input name="password" type="password" autocomplete="current-password" required></label><p role="status" class="admin-status">${esc(message)}</p><button type="submit" class="button primary">${w("Sign in", "Se connecter")}</button><button type="button" class="text-link" data-forgot>${w("Forgot password?", "Mot de passe oublié?")}</button></form>`;
+    document.body.classList.remove("demo-session");
+    body.innerHTML = `<form class="admin-login"><h1>${demoEntry ? w("Demo sign-in", "Connexion démo") : w("Admin sign-in", "Connexion administrateur")}</h1><p>${demoEntry ? w("Read-only map demo. Private enquiries and résumés are hidden.", "Carte en lecture seule. Les demandes et CV privés sont masqués.") : w("Invited team members only.", "Réservé aux membres invités.")}</p><label class="field"><span>${demoEntry ? w("Username", "Nom d’utilisateur") : w("Email", "Courriel")}</span><input name="email" type="${demoEntry ? "text" : "email"}" ${demoEntry ? 'value="demo" readonly' : ""} autocomplete="username" required></label><label class="field"><span>${w("Password", "Mot de passe")}</span><input name="password" type="password" autocomplete="current-password" required></label><p role="status" class="admin-status">${esc(message)}</p><button type="submit" class="button primary">${w("Sign in", "Se connecter")}</button>${demoEntry ? "" : `<button type="button" class="text-link" data-forgot>${w("Forgot password?", "Mot de passe oublié?")}</button>`}</form>`;
     const form = body.querySelector("form");
     form.onsubmit = async (e) => {
       e.preventDefault();
@@ -106,7 +108,7 @@ export async function mountAdmin(root, language, config, all) {
         r.challenge ? challenge(r.challenge) : workspace();
       });
     };
-    form.querySelector("[data-forgot]").onclick = () => recover();
+    form.querySelector("[data-forgot]")?.addEventListener("click", recover);
   }
   async function busy(form, fn) {
     const b = form.querySelector("[type=submit]");
@@ -174,7 +176,10 @@ export async function mountAdmin(root, language, config, all) {
     try {
       const session = await request("/admin/session");
       if (disposed || g !== generation) return;
-      body.innerHTML = `<div class="admin-toolbar"><nav aria-label="${w("Admin tools", "Outils administrateur")}"><button class="button secondary" data-tool="maps">${w("Maps", "Cartes")}</button><button class="button secondary" data-tool="inbox">${w("Inbox", "Demandes et candidatures")}</button></nav><div class="admin-account"><span>${esc(auth.accountLabel() || session.user)}</span><button class="text-link" data-open-app>${w("Open Maps app", "Ouvrir l’app Cartes")}</button><button class="text-link" data-install-app>${w("Install Maps app", "Installer l’app Cartes")}</button><button class="text-link" data-map-fullscreen hidden></button><button class="text-link" data-logout>${w("Sign out", "Se déconnecter")}</button></div></div><div id="admin-tool"></div>`;
+      if (demoEntry && !session.demo) { login(); return; }
+      document.body.classList.toggle("demo-session", !!session.demo);
+      prepareMapsApp();
+      body.innerHTML = `${session.demo ? `<p class="demo-notice" role="status">${w("Demo workspace · Read only. Private enquiries, résumés and live visit records are hidden.", "Espace démo · Lecture seule. Les demandes, CV et visites privés sont masqués.")}</p>` : ""}<div class="admin-toolbar"><nav aria-label="${w("Admin tools", "Outils administrateur")}"><button class="button secondary" data-tool="maps">${w("Maps", "Cartes")}</button><button class="button secondary" data-tool="inbox">${w("Inbox", "Demandes et candidatures")}</button></nav><div class="admin-account"><span>${esc(auth.accountLabel() || session.user)}</span><button class="text-link" data-open-app>${w("Open Maps app", "Ouvrir l’app Cartes")}</button><button class="text-link" data-install-app>${w("Install Maps app", "Installer l’app Cartes")}</button><button class="text-link" data-map-fullscreen hidden></button><button class="text-link" data-logout>${w("Sign out", "Se déconnecter")}</button></div></div><div id="admin-tool"></div>`;
       body.querySelector("[data-open-app]").onclick = () =>
         launchMapsApp(language);
       body.querySelector("[data-install-app]").onclick = async () => {
@@ -207,7 +212,9 @@ export async function mountAdmin(root, language, config, all) {
           );
         tool.innerHTML = "";
         if (name === "maps")
-          disposeTool = await mountMaps(tool, { request, language });
+          disposeTool = await mountMaps(tool, { request, language, readOnly: !!session.demo });
+        else if (session.demo)
+          tool.innerHTML = `<section class="demo-inbox"><h2>${w("Private inbox", "Boîte privée")}</h2><p>${w("Customer enquiries, job applications and their files are not available in the shared demo.", "Les demandes de clients, candidatures et fichiers ne sont pas accessibles dans la démo partagée.")}</p></section>`;
         else
           mountInbox(tool, language, config, all, {
             request,
@@ -254,5 +261,6 @@ export async function mountAdmin(root, language, config, all) {
     headerObserver.disconnect();
     root.style.removeProperty("--admin-header-height");
     root.classList.remove("admin-portal");
+    document.body.classList.remove("demo-session");
   };
 }

@@ -194,10 +194,13 @@ test("signed access tokens enforce issuer, client, expiry and SAP admin membersh
   const verify = async (token) =>
     verifyAdminToken(token, { issuer, clientId, key: keys.publicKey });
   assert.equal((await verify(await sign())).id, "test-user");
+  assert.equal((await verify(await sign())).demo, undefined);
+  assert.equal((await verify(await sign({ "cognito:groups": ["SAPAdmins", "SAPDemo"] }))).demo, true);
   for (const claims of [
     { token_use: "id" },
     { client_id: "different-project" },
     { "cognito:groups": [] },
+    { "cognito:groups": ["SAPDemo"] },
     { "cognito:groups": "SAPAdmins" },
   ])
     assert.equal(await verify(await sign(claims)), null);

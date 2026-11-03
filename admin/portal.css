@@ -1954,3 +1954,6 @@ body.map-focus .map-status {
     );
   }
 }
+
+.demo-notice,.demo-inbox{padding:16px;border:1px solid var(--admin-line);border-radius:12px;background:var(--admin-panel);line-height:1.5}
+body.maps-app .demo-notice{display:none}

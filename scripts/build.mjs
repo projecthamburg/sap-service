@@ -42,6 +42,7 @@ for (const name of (await readdir("admin")).sort())
   releaseHash.update(await readFile(resolve("admin", name)));
 releaseHash.update(await readFile("public/admin-auth.json"));
 releaseHash.update(await readFile("public/manifest.webmanifest"));
+releaseHash.update(await readFile("public/manifest-demo.webmanifest"));
 releaseHash.update(await readFile("public/sw.js"));
 releaseHash.update(publicConfig);
 releaseHash.update(await readFile("index.html"));
