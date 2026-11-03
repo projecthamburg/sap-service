@@ -34,7 +34,7 @@ const check = (name, passed) => {
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("request", (r) => {
-  if (r.url().includes("/admin/session")) bearer = r.headers().authorization;
+  if (r.url().includes("/admin/session") && r.headers().authorization) bearer = r.headers().authorization;
 });
 page.on("response", async (r) => {
   if (

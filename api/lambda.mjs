@@ -335,7 +335,7 @@ export async function handler(event) {
       return json(response.data, response.status, origin);
     }
     if (path.startsWith("/admin/")) {
-      const result = await mapsService(path,method,body,identity || {id:"legacy-operator"});
+      const result = await mapsService(path,method,body,identity || {id:"legacy-operator"},{test:headers["x-sap-test"]==="true"});
       if(result) return json(result.data,result.status || 200,origin);
     }
     if (path === "/admin/submissions" && method === "GET") {

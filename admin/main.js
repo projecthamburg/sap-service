@@ -1,3 +1,9 @@
+import {
+  prepareMapsApp,
+  installMapsApp,
+  launchMapsApp,
+  isMapsApp,
+} from "../src/pwa.js";
 import * as auth from "./auth.js";
 import { escapeHTML as esc } from "../src/utils.js";
 import { mountInbox } from "../src/inbox.js";
@@ -10,6 +16,7 @@ export async function mountAdmin(root, language, config, all) {
     disposeTool = () => {},
     generation = 0;
   root.classList.add("admin-portal");
+  prepareMapsApp();
   root.innerHTML = `<section class="admin-shell"><p class="eyebrow">SAP SERVICE INC. / ${w("OPERATIONS", "OPÉRATIONS")}</p><h1>${w("Your workspace.", "Votre espace de travail.")}</h1><div id="admin-body" role="region" aria-label="Admin"><p role="status">${w("Connecting securely…", "Connexion sécurisée…")}</p></div></section>`;
   const body = root.querySelector("#admin-body");
   async function request(path, options = {}) {
@@ -134,7 +141,20 @@ export async function mountAdmin(root, language, config, all) {
     try {
       const session = await request("/admin/session");
       if (disposed || g !== generation) return;
-      body.innerHTML = `<div class="admin-toolbar"><nav aria-label="${w("Admin tools", "Outils administrateur")}"><button class="button secondary" data-tool="maps">${w("Maps & field radar", "Carte et radar terrain")}</button><button class="button secondary" data-tool="inbox">${w("Submissions inbox", "Demandes et candidatures")}</button></nav><div class="admin-account"><span>${esc(auth.accountLabel() || session.user)}</span><button class="text-link" data-logout>${w("Sign out", "Se déconnecter")}</button></div></div><div id="admin-tool"></div>`;
+      body.innerHTML = `<div class="admin-toolbar"><nav aria-label="${w("Admin tools", "Outils administrateur")}"><button class="button secondary" data-tool="maps">${w("Maps & field radar", "Carte et radar terrain")}</button><button class="button secondary" data-tool="inbox">${w("Submissions inbox", "Demandes et candidatures")}</button></nav><div class="admin-account"><span>${esc(auth.accountLabel() || session.user)}</span><button class="text-link" data-open-app>${w("Open Maps app", "Ouvrir l’app Cartes")}</button><button class="text-link" data-install-app>${w("Install Maps app", "Installer l’app Cartes")}</button><button class="text-link" data-logout>${w("Sign out", "Se déconnecter")}</button></div></div><div id="admin-tool"></div>`;
+      body.querySelector("[data-open-app]").onclick = () =>
+        launchMapsApp(language);
+      body.querySelector("[data-install-app]").onclick = async () => {
+        if (!(await installMapsApp())) {
+          const d = document.createElement("dialog");
+          d.className = "admin-dialog";
+          d.innerHTML = `<header><h3>${w("Install SAP Maps", "Installer SAP Cartes")}</h3><button class="icon-button" aria-label="Close">×</button></header><div class="dialog-content"><p>${w("On iPhone/iPad: open in Safari, tap Share, then Add to Home Screen. On Android/desktop Chrome: use Install app or Add to Home screen from the browser menu.", "Sur iPhone/iPad : ouvrez dans Safari, touchez Partager, puis Sur l’écran d’accueil. Sur Android ou Chrome ordinateur : choisissez Installer l’application dans le menu du navigateur.")}</p><p>${w("Open the Maps app and allow location access to use your position and nearby alerts. Keep the app open for reliable live location updates.", "Ouvrez l’app Cartes et autorisez la localisation pour les alertes de proximité. Gardez l’app ouverte pour des mises à jour fiables.")}</p></div>`;
+          root.append(d);
+          d.querySelector("button").onclick = () => d.close();
+          d.addEventListener("close", () => d.remove());
+          d.showModal();
+        }
+      };
       body.querySelector("[data-logout]").onclick = () => {
         generation++;
         disposeTool();

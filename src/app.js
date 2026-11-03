@@ -1,3 +1,4 @@
+import {isMapsApp,prepareMapsApp} from "./pwa.js";
 import { content, getContent } from "./content.js";
 import { icon, logo } from "./icons.js";
 import {
@@ -10,6 +11,8 @@ import { Estimator } from "./estimator.js";
 import { mountCareers } from "./careers.js";
 
 const app = document.getElementById("app");
+document.body.classList.toggle("maps-app",isMapsApp());
+if(isMapsApp())prepareMapsApp();
 installLocalizedValidation(document);
 let language = /^#\/fr\//.test(location.hash)
   ? "fr"
@@ -449,6 +452,7 @@ function render(force = false) {
     force = true;
   }
   const page = currentPage();
+  if(isMapsApp() && page === "home"){location.hash=`#/${language}/admin/maps`;return;}
   if (!force && page === activePage && !(page === "admin" && location.hash !== activeAdminHash)) {
     scrollToAnchor();
     return;

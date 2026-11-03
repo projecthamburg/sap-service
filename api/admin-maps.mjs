@@ -1,3 +1,4 @@
+import { createFieldService } from "./map-field.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { GetCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -14,7 +15,23 @@ export function createMapsService({ db, s3, table, bucket }) {
         })
       )
     ).Item;
-  return async (path, method, body, actor) => {
+  const readResearch = async () => {
+    const c = await read();
+    if (!c) return [];
+    const o = await s3.send(
+      new GetObjectCommand({ Bucket: bucket, Key: c.key })
+    );
+    return JSON.parse(await o.Body.transformToString());
+  };
+  const field = createFieldService({
+    db,
+    table,
+    researchRecordExists: async (id) =>
+      (await readResearch()).some((r) => r.lead_id === id),
+  });
+  return async (path, method, body, actor, options = {}) => {
+    const operational = await field.handle(path, method, body, actor, options);
+    if (operational) return operational;
     if (path === "/admin/session" && method === "GET")
       return {
         data: { authenticated: true, user: actor.username || "Operator" },
@@ -26,13 +43,21 @@ export function createMapsService({ db, s3, table, bucket }) {
     if (path !== "/admin/maps/dataset") return null;
     const current = await read();
     if (method === "GET") {
-      if (!current) return { data: { records: [], version: null } };
+      if (!current)
+        return {
+          data: {
+            records: [],
+            version: null,
+            ...(await field.snapshot(options.test)),
+          },
+        };
       const object = await s3.send(
         new GetObjectCommand({ Bucket: bucket, Key: current.key })
       );
       return {
         data: {
           records: JSON.parse(await object.Body.transformToString()),
+          ...(await field.snapshot(options.test)),
           version: current.version,
           updatedAt: current.updatedAt,
           source: current.source,

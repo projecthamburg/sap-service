@@ -1,3 +1,6 @@
+import { setupAppLayout } from "./app-layout.js";
+import { isMapsApp } from "../src/pwa.js";
+import { fieldLead, drivingURL, sitePinSVG, VISIT_LABELS } from "./field.js";
 import { reviewedLocation } from "./location.js";
 import { mapShell, dossierHTML } from "./views.js";
 import { escapeHTML as esc } from "../src/utils.js";
@@ -23,6 +26,14 @@ import "leaflet/dist/leaflet.css";
 export function mountMaps(root, { request, language }) {
   const fr = language === "fr",
     w = (a, b) => (fr ? b : a);
+  let researchRecords = [],
+    fieldSites = [],
+    activity = {},
+    pendingCentre = false,
+    gpsGeneration = 0,
+    notificationsOn = false,
+    followingLocation = false,
+    wakeLock = null;
   let records = [],
     version = null,
     disposed = false,
@@ -42,7 +53,8 @@ export function mountMaps(root, { request, language }) {
     beacon = null,
     quick = "",
     insideOnly = false,
-    previousPosition = null;
+    previousPosition = null,
+    lastAlertAt = 0;
   const alerted = new Set(),
     reviews = new Map();
   let prefs;
@@ -52,16 +64,53 @@ export function mountMaps(root, { request, language }) {
     prefs = {};
   }
   let analyst = prefs.analyst !== false,
-    visibleTiers = TIERS.filter((t) => t !== "Unqualified"),
-    radius = Number(prefs.radius) || 3200;
+    visibleTiers = [...TIERS],
+    radius = [804.672, 1609.344, 3218.688, 8046.72, 16093.44].includes(
+      Number(prefs.radius)
+    )
+      ? Number(prefs.radius)
+      : 3218.688;
+  let markerStyle = ["building", "hardhat", "crane"].includes(prefs.markerStyle)
+    ? prefs.markerStyle
+    : "building";
   root.innerHTML = mapShell(w, visibleTiers);
   const q = (s) => root.querySelector(s),
     status = q(".map-status"),
     canvas = q(".map-canvas");
   q("[data-radius]").value = String(radius);
+  if (isMapsApp()) {
+    setupAppLayout(root, w);
+    q("[data-filter-panel]").open = false;
+    q(".map-layout").dataset.layout = "map";
+    root
+      .querySelectorAll("button[data-layout]")
+      .forEach((b) =>
+        b.setAttribute("aria-pressed", String(b.dataset.layout === "map"))
+      );
+  }
   function message(s) {
     if (!disposed) status.textContent = s;
   }
+  function rebuildRecords() {
+    records = [...researchRecords, ...fieldSites.map(fieldLead)];
+  }
+  const visitState = (id) => activity[id]?.status || "open";
+  function drive(r) {
+    return drivingURL(coordinates(r), position);
+  }
+  q("[data-layers]")?.addEventListener("click", () => {
+    if (engine === "google" && map) {
+      map.setMapTypeId(
+        map.getMapTypeId() === "satellite" ? "roadmap" : "satellite"
+      );
+    } else
+      message(
+        w(
+          "Satellite layers are available on Google Maps.",
+          "Les couches satellite sont disponibles dans Google Maps."
+        )
+      );
+  });
   function filtered() {
     return filterLeads(records, {
       search: q("[data-search]").value,
@@ -71,6 +120,8 @@ export function mountMaps(root, { request, language }) {
     }).filter(
       (r) =>
         quickMatch(r, quick) &&
+        (!q("[data-visit-filter]").value ||
+          visitState(r.lead_id) === q("[data-visit-filter]").value) &&
         (!insideOnly ||
           ((position || anchor) &&
             coordinates(r) &&
@@ -106,6 +157,9 @@ export function mountMaps(root, { request, language }) {
   }
   function refresh() {
     if (disposed) return;
+    const sheetCount = q("[data-sheet-count]");
+    if (sheetCount)
+      sheetCount.textContent = `${records.length} ${w("sites · tap to view", "sites · toucher pour voir")}`;
     const rows = filtered();
     root
       .querySelectorAll("[data-count]")
@@ -121,7 +175,7 @@ export function mountMaps(root, { request, language }) {
       rows
         .map(
           (r) =>
-            `<button class="lead-row ${selected === r.lead_id ? "selected" : ""}" data-lead="${esc(r.lead_id)}" style="--tier:${COLORS[r.priority]}"><span class="lead-row-meta">${esc(r.lead_id)} · ${esc(r.priority)} <strong>${r.opportunity_score}/100</strong></span><span class="lead-row-title">${esc(r.project_name)}</span><span>${esc(contractorName(r.general_contractor))} · ${esc(r.city)}</span><small>${esc(r.project_stage)}${position && coordinates(r) ? ` · ${(distance(position, coordinates(r)) / 1000).toFixed(1)} km` : ""}</small></button>`
+            `<button class="lead-row ${selected === r.lead_id ? "selected" : ""}" data-lead="${esc(r.lead_id)}" style="--tier:${COLORS[r.priority]}"><span class="lead-row-meta">${esc(r.lead_id)} · ${esc(r.priority)} <strong>${r.isFieldSite ? w("Field site", "Site terrain") : r.opportunity_score + "/100"}</strong></span><span class="lead-row-title">${esc(r.project_name)}</span><span>${esc(contractorName(r.general_contractor))} · ${esc(r.city)}</span><small>${esc(r.project_stage)} · ${w(...VISIT_LABELS[visitState(r.lead_id)])}<span data-distance>${position && coordinates(r) ? ` · ${(distance(position, coordinates(r)) / 1609.344).toFixed(1)} mi` : ""}</span></small></button>`
         )
         .join("") ||
       `<p class="map-empty">${w("No matching leads. Change your filters.", "Aucune piste. Modifiez vos filtres.")}</p>`;
@@ -151,6 +205,7 @@ export function mountMaps(root, { request, language }) {
     paint();
     radar();
   }
+  function updateDistanceLabels(){root.querySelectorAll("[data-lead]").forEach(button=>{const record=records.find(r=>r.lead_id===button.dataset.lead),label=button.querySelector("[data-distance]");if(label&&record&&coordinates(record)&&position)label.textContent=` · ${(distance(position,coordinates(record))/1609.344).toFixed(1)} mi`;});}
   function clearMarkers() {
     markers.forEach((m) => (engine === "google" ? m.setMap(null) : m.remove()));
     markers = [];
@@ -178,23 +233,37 @@ export function mountMaps(root, { request, language }) {
           opacity: active ? 1 : 0.25,
           zIndex: selected === r.lead_id ? 99 : active ? 10 : 1,
           icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: selected === r.lead_id ? 11 : active && highlight ? 10 : 7,
-            fillColor: COLORS[r.priority],
-            fillOpacity: 1,
-            strokeColor: active && highlight ? "#14293f" : "#fff",
-            strokeWeight: active && highlight ? 4 : 2,
+            url:
+              "data:image/svg+xml;charset=UTF-8," +
+              encodeURIComponent(
+                sitePinSVG({
+                  color: COLORS[r.priority],
+                  style: markerStyle,
+                  state: visitState(r.lead_id),
+                  selected: selected === r.lead_id || (!!highlight && active),
+                })
+              ),
+            scaledSize: new window.google.maps.Size(36, 46),
+            anchor: new window.google.maps.Point(18, 44),
           },
+          optimized: false,
         });
         m.addListener("click", () => openOverlap(r, p));
       } else {
-        m = L.circleMarker([p.lat, p.lng], {
-          radius: selected === r.lead_id ? 11 : highlight && active ? 10 : 7,
-          color: active && highlight ? "#14293f" : "#fff",
-          weight: active && highlight ? 4 : 2,
-          fillColor: COLORS[r.priority],
-          fillOpacity: active ? 1 : 0.2,
+        m = L.marker([p.lat, p.lng], {
+          title: r.project_name,
           opacity: active ? 1 : 0.25,
+          icon: L.divIcon({
+            className: "construction-pin",
+            html: sitePinSVG({
+              color: COLORS[r.priority],
+              style: markerStyle,
+              state: visitState(r.lead_id),
+              selected: selected === r.lead_id || (!!highlight && active),
+            }),
+            iconSize: [36, 46],
+            iconAnchor: [18, 44],
+          }),
         })
           .addTo(map)
           .on("click", () => openOverlap(r, p));
@@ -205,6 +274,7 @@ export function mountMaps(root, { request, language }) {
   }
   function paintRadar() {
     q("[data-stop]").disabled = !radarOn;
+    q("[data-add-site]").disabled = !position;
     if (radarShape) {
       engine === "google" ? radarShape.setMap(null) : radarShape.remove();
       radarShape = null;
@@ -228,7 +298,7 @@ export function mountMaps(root, { request, language }) {
       beacon = new window.google.maps.Marker({
         map,
         position: c,
-        title: position ? "Live GPS position" : "Manual map anchor",
+        title: position ? "You are here · Add a site" : "Manual map anchor",
         zIndex: 200,
         icon: {
           path: Number.isFinite(position?.heading)
@@ -236,12 +306,13 @@ export function mountMaps(root, { request, language }) {
             : window.google.maps.SymbolPath.CIRCLE,
           scale: 7,
           rotation: position?.heading || 0,
-          fillColor: "#1e2d53",
+          fillColor: "#1a73e8",
           fillOpacity: 1,
-          strokeColor: "#ff3b62",
+          strokeColor: "#ffffff",
           strokeWeight: 3,
         },
       });
+      if (position) beacon.addListener("click", openMyLocation);
     } else {
       radarShape = L.circle([c.lat, c.lng], {
         radius,
@@ -252,11 +323,96 @@ export function mountMaps(root, { request, language }) {
       beacon = L.circleMarker([c.lat, c.lng], {
         radius: 8,
         color: "#ff3b62",
-        fillColor: "#1e2d53",
+        fillColor: "#1a73e8",
         fillOpacity: 1,
         weight: 3,
       }).addTo(map);
+      if (position) beacon.on("click", openMyLocation);
     }
+    q("[data-add-site]").disabled = !position;
+  }
+  function openMyLocation() {
+    if (!position) {
+      startGPS({ centre: true });
+      message(
+        w(
+          "Share your location, then tap the blue location marker to add a site.",
+          "Partagez votre position, puis touchez le point bleu pour ajouter un site."
+        )
+      );
+      return;
+    }
+    const fix = { ...position };
+    const nearbySites = records
+      .filter(
+        (r) =>
+          coordinates(r) &&
+          distance(fix, coordinates(r)) <= Math.max(100, fix.accuracy)
+      )
+      .slice(0, 4);
+    dialog(
+      w("You are here", "Votre position"),
+      `<p>${w("GPS accuracy", "Précision GPS")} ±${Math.round(fix.accuracy)} m</p><p class="fine-print">${fix.lat.toFixed(6)}, ${fix.lng.toFixed(6)}</p>${nearbySites.length ? `<p>${w("Existing sites near this location:", "Sites déjà enregistrés à proximité :")}</p>${nearbySites.map((r) => `<button class="button secondary" data-existing-site="${esc(r.lead_id)}">${esc(r.project_name)}</button>`).join("")}` : ""}<button class="button primary" data-record-location>${w("Add a site at this location", "Ajouter un site à cette position")}</button>`,
+      (d) => {
+        d.querySelectorAll("[data-existing-site]").forEach(
+          (b) =>
+            (b.onclick = () => {
+              d.close();
+              openLead(b.dataset.existingSite);
+            })
+        );
+        d.querySelector("[data-record-location]").onclick = () => {
+          d.close();
+          addFieldSite(fix);
+        };
+      }
+    );
+  }
+  function addFieldSite(fix) {
+    dialog(
+      w("Add a field site", "Ajouter un site terrain"),
+      `<form data-new-site><p>${w("This saves a site observation at the selected GPS position. Your travel history is not recorded.", "Cette action enregistre une observation à la position GPS choisie. Votre historique de déplacement n’est pas enregistré.")}</p><p class="fine-print">${fix.lat.toFixed(6)}, ${fix.lng.toFixed(6)} · ±${Math.round(fix.accuracy)} m</p><label class="field"><span>${w("Site name *", "Nom du site *")}</span><input name="name" required minlength="3" maxlength="180" placeholder="${w("e.g. Renovation on Notre-Dame", "Ex. Rénovation sur Notre-Dame")}"></label><label class="field"><span>${w("Address, if known", "Adresse, si connue")}</span><input name="address" maxlength="300" autocomplete="street-address"></label><div class="field-form-grid"><label class="field"><span>${w("City", "Ville")}</span><input name="city" maxlength="300"></label><label class="field"><span>Province</span><select name="province"><option value="">${w("To confirm", "À confirmer")}</option><option value="QC">Québec</option><option value="ON">Ontario</option></select></label></div><label class="field"><span>${w("Contractor, if known", "Entrepreneur, si connu")}</span><input name="contractor" maxlength="300"></label><label class="field"><span>${w("What did you observe? / next steps", "Observations / prochaines étapes")}</span><textarea name="notes" maxlength="4000" rows="3"></textarea></label>${fix.accuracy > 200 ? `<label class="check-line"><input type="checkbox" name="confirmLocation" required> ${w("GPS accuracy is low. I confirm this is the site location.", "Le GPS est imprécis. Je confirme la position du site.")}</label>` : ""}<p role="status" data-save-status></p><button class="button primary" type="submit">${w("Save site", "Enregistrer le site")}</button></form>`,
+      (d) => {
+        const requestId = crypto.randomUUID(),
+          form = d.querySelector("form");
+        form.onsubmit = async (e) => {
+          e.preventDefault();
+          const button = form.querySelector("[type=submit]");
+          button.disabled = true;
+          try {
+            const values = Object.fromEntries(new FormData(form)),
+              result = await request("/admin/maps/field-sites", {
+                method: "POST",
+                body: JSON.stringify({
+                  ...values,
+                  requestId,
+                  lat: fix.lat,
+                  lng: fix.lng,
+                  accuracy: fix.accuracy,
+                  locationCapturedAt: new Date(
+                    fix.timestamp || Date.now()
+                  ).toISOString(),
+                  confirmLocation: values.confirmLocation === "on",
+                }),
+              });
+            if (disposed) return;
+            fieldSites.push(result.site);
+            rebuildRecords();
+            alerted.add(result.site.id);
+            populate();
+            refresh();
+            d.close();
+            openLead(result.site.id);
+          } catch (e) {
+            form.querySelector("[data-save-status]").textContent = [
+              e.message,
+              ...(e.data?.errors || []),
+            ].join(" ");
+            button.disabled = false;
+          }
+        };
+      }
+    );
   }
   function openOverlap(r, p) {
     const same = filtered().filter((v) => {
@@ -290,7 +446,15 @@ export function mountMaps(root, { request, language }) {
         { padding: [30, 30], maxZoom: 14 }
       );
   }
-  async function initMap(next) {
+  async function initMap(next, { preserveView = false } = {}) {
+    const view =
+      preserveView && map && engine === "google"
+        ? {
+            center: { lat: map.getCenter().lat(), lng: map.getCenter().lng() },
+            zoom: map.getZoom(),
+            mapTypeId: map.getMapTypeId(),
+          }
+        : null;
     const g = ++mapGeneration;
     if (next !== engine && anchor) stopGPS();
     clearMarkers();
@@ -315,27 +479,20 @@ export function mountMaps(root, { request, language }) {
         const c = await request("/admin/maps/config");
         const gm = await googleMaps(c.googleMapsKey);
         if (disposed || g !== mapGeneration) return;
+        const { ColorScheme } = await gm.importLibrary("core");
+        if (disposed || g !== mapGeneration) return;
         map = new gm.Map(canvas, {
           center: { lat: 45.51, lng: -73.57 },
           zoom: 9,
-          mapTypeControl: true,
+          mapTypeControl: !isMapsApp(),
           streetViewControl: true,
-          fullscreenControl: true,
+          fullscreenControl: !isMapsApp(),
           gestureHandling: "cooperative",
-          styles:
+          colorScheme:
             document.documentElement.dataset.theme === "dark"
-              ? [
-                  { elementType: "geometry", stylers: [{ color: "#18243b" }] },
-                  {
-                    elementType: "labels.text.fill",
-                    stylers: [{ color: "#adb7ca" }],
-                  },
-                  {
-                    elementType: "labels.text.stroke",
-                    stylers: [{ color: "#18243b" }],
-                  },
-                ]
-              : null,
+              ? ColorScheme.DARK
+              : ColorScheme.LIGHT,
+          ...(view || {}),
         });
       } else {
         map = L.map(canvas, { center: [45.51, -73.57], zoom: 9 });
@@ -346,8 +503,20 @@ export function mountMaps(root, { request, language }) {
         }).addTo(map);
       }
       if (disposed || g !== mapGeneration) return;
+      if (engine === "google")
+        map.addListener("dragstart", () => {
+          followingLocation = false;
+        });
+      else
+        map.on("dragstart", () => {
+          followingLocation = false;
+        });
       paint();
-      fit();
+      if (!view) {
+        if (followingLocation && position) centreOnMe();
+        else fit();
+      }
+      canvas.dataset.scheme = document.documentElement.dataset.theme;
       message(
         `${w("Private research loaded", "Recherches privées chargées")} · ${records.length} ${w("records", "dossiers")}. ${w("Review citations and conflicts before outreach.", "Consultez les sources et conflits avant toute démarche.")}`
       );
@@ -371,7 +540,7 @@ export function mountMaps(root, { request, language }) {
       street?.setVisible(false);
       street = null;
       d.remove();
-      if(previousFocus?.isConnected)previousFocus.focus();
+      if (previousFocus?.isConnected) previousFocus.focus();
     });
     d.showModal();
     mount?.(d);
@@ -388,8 +557,45 @@ export function mountMaps(root, { request, language }) {
     }
     dialog(
       r.project_name,
-      dossierHTML(r, { w, p, analyst, reviewed: reviews.has(id) }),
+      dossierHTML(r, {
+        w,
+        p,
+        analyst,
+        reviewed: reviews.has(id),
+        driveURL: drive(r),
+        visitState: visitState(r.lead_id),
+        workflow: activity[r.lead_id],
+      }),
       (d) => {
+        d.querySelectorAll("[data-set-visit]").forEach(
+          (b) =>
+            (b.onclick = async () => {
+              const status = d.querySelector("[data-work-status]");
+              b.disabled = true;
+              try {
+                const result = await request("/admin/maps/site-status", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    leadId: r.lead_id,
+                    status: b.dataset.setVisit,
+                    expectedVersion: activity[r.lead_id]?.version || null,
+                    notes: d.querySelector("[data-visit-notes]").value,
+                  }),
+                });
+                if (disposed) return;
+                activity[r.lead_id] = result.activity;
+                alerted.delete(r.lead_id);
+                refresh();
+                d.close();
+                message(
+                  `${r.project_name} · ${w(...VISIT_LABELS[result.activity.status])}`
+                );
+              } catch (e) {
+                status.textContent = e.message;
+                b.disabled = false;
+              }
+            })
+        );
         d.querySelector("[data-pin-anchor]")?.addEventListener("click", () => {
           stopGPS();
           anchor = coordinates(r);
@@ -437,7 +643,7 @@ export function mountMaps(root, { request, language }) {
             map.panTo(c);
             d.querySelector("[data-route]")?.setAttribute(
               "href",
-              `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`
+              drivingURL(c, position)
             );
           } catch (e) {
             s.textContent = e.message;
@@ -484,14 +690,23 @@ export function mountMaps(root, { request, language }) {
   function radar() {
     if (!radarOn || (!position && !anchor)) return;
     const origin = position || anchor,
-      near = filtered().filter(
-        (r) => coordinates(r) && distance(origin, coordinates(r)) <= radius
-      );
+      near = filtered()
+        .filter(
+          (r) =>
+            visitState(r.lead_id) !== "visited" &&
+            coordinates(r) &&
+            distance(origin, coordinates(r)) <= radius
+        )
+        .sort(
+          (a, b) =>
+            distance(origin, coordinates(a)) - distance(origin, coordinates(b))
+        );
     const next =
       near.find((r) => !alerted.has(r.lead_id)) ||
-      (position
+      (prefs.earlyWarning && position
         ? filtered().find(
             (r) =>
+              visitState(r.lead_id) !== "visited" &&
               coordinates(r) &&
               approaching(
                 position,
@@ -503,15 +718,35 @@ export function mountMaps(root, { request, language }) {
               !alerted.has(r.lead_id)
           )
         : null);
-    if (next) {
+    if (next && Date.now() - lastAlertAt > 15000) {
+      lastAlertAt = Date.now();
       alerted.add(next.lead_id);
       const alert = q(".radar-alert");
       alert.hidden = false;
-      alert.innerHTML = `<strong>${w("Nearby research lead", "Piste à proximité")}</strong><span>${esc(next.project_name)} · ${(distance(origin, coordinates(next)) / 1000).toFixed(1)} km</span><button class="button secondary" data-open>${w("Review dossier", "Voir le dossier")}</button><a class="button secondary" href="https://www.google.com/maps/dir/?api=1&destination=${coordinates(next).lat},${coordinates(next).lng}" target="_blank" rel="noopener noreferrer">${w("Directions", "Itinéraire")}</a><button class="text-link" data-dismiss>${w("Dismiss", "Fermer")}</button>`;
+      alert.innerHTML = `<strong>${w("Nearby research lead", "Piste à proximité")}</strong><span>${esc(next.project_name)} · ${(distance(origin, coordinates(next)) / 1000).toFixed(1)} km</span><button class="button secondary" data-open>${w("Review dossier", "Voir le dossier")}</button><a class="button secondary" href="${drive(next)}" target="_blank" rel="noopener noreferrer">${w("Drive here", "Y aller en voiture")}</a><button class="text-link" data-dismiss>${w("Dismiss", "Fermer")}</button>`;
       alert.querySelector("[data-open]").onclick = () => openLead(next.lead_id);
       alert.querySelector("[data-dismiss]").onclick = () => {
         alert.hidden = true;
       };
+      if (notificationsOn && window.Notification?.permission === "granted") {
+        try {
+          const options = {
+            body: `${next.project_name} · ${(distance(origin, coordinates(next)) / 1609.344).toFixed(1)} mi`,
+            tag: "sap-site-" + next.lead_id,
+            icon: "./brand/map-app-192.png",
+          };
+          if (navigator.serviceWorker?.controller)
+            navigator.serviceWorker.ready
+              .then((reg) =>
+                reg.showNotification(
+                  w("Nearby site", "Site à proximité"),
+                  options
+                )
+              )
+              .catch(() => {});
+          else new Notification(w("Nearby site", "Site à proximité"), options);
+        } catch {}
+      }
       if (audio?.state === "running") {
         const osc = audio.createOscillator(),
           gain = audio.createGain();
@@ -528,6 +763,10 @@ export function mountMaps(root, { request, language }) {
       `${position ? w("GPS active", "GPS actif") : w("Map anchor active", "Centre de carte actif")} · ${near.length} ${w("nearby", "à proximité")}${position?.accuracy ? ` · ±${Math.round(position.accuracy)} m` : ""}`;
   }
   function stopGPS() {
+    gpsGeneration++;
+    followingLocation = false;
+    wakeLock?.release().catch(() => {});
+    wakeLock = null;
     if (watch !== null) navigator.geolocation.clearWatch(watch);
     watch = null;
     position = null;
@@ -535,14 +774,20 @@ export function mountMaps(root, { request, language }) {
     anchor = null;
     previousPosition = null;
     paintRadar();
-    q("[data-gps]").textContent = w("Start GPS radar", "Activer le radar GPS");
+    q("[data-gps]").textContent = w("Nearby alerts", "Alertes à proximité");
     q("[data-radar-status]").textContent = w(
       "GPS off · foreground use only",
       "GPS désactivé · premier plan uniquement"
     );
     q(".radar-alert").hidden = true;
   }
-  q("[data-gps]").onclick = () => {
+  function startGPS({ centre = false } = {}) {
+    pendingCentre = centre;
+    if (centre) followingLocation = true;
+    if (watch !== null && centre) {
+      if (position) centreOnMe();
+      return;
+    }
     if (watch !== null) {
       stopGPS();
       refresh();
@@ -567,14 +812,31 @@ export function mountMaps(root, { request, language }) {
     anchor = null;
     previousPosition = null;
     paintRadar();
-    q("[data-gps]").textContent = w("Stop GPS radar", "Arrêter le radar GPS");
+    q("[data-gps]").textContent = w(
+      "Stop nearby alerts",
+      "Arrêter les alertes"
+    );
+    if (
+      prefs.keepAwake &&
+      navigator.wakeLock &&
+      document.visibilityState === "visible"
+    )
+      navigator.wakeLock
+        .request("screen")
+        .then((lock) => {
+          if (radarOn) wakeLock = lock;
+          else lock.release();
+        })
+        .catch(() => {});
+    const run = ++gpsGeneration;
     watch = navigator.geolocation.watchPosition(
       (p) => {
-        if (disposed) return;
+        if (disposed || run !== gpsGeneration) return;
         position = {
           lat: p.coords.latitude,
           lng: p.coords.longitude,
           accuracy: p.coords.accuracy,
+          timestamp: p.timestamp,
           speed: p.coords.speed,
           heading: p.coords.heading,
         };
@@ -585,9 +847,19 @@ export function mountMaps(root, { request, language }) {
         )
           position.heading = bearing(previousPosition, position);
         previousPosition = position;
-        refresh();
+        if (pendingCentre) {
+          pendingCentre = false;
+          centreOnMe();
+        } else if (followingLocation && map) {
+          engine === "google"
+            ? map.panTo(position)
+            : map.panTo([position.lat, position.lng], { animate: false });
+        }
+        q("[data-add-site]").disabled = false;
+        if(insideOnly)refresh();else{updateDistanceLabels();radar();}
       },
       (e) => {
+        if (disposed || run !== gpsGeneration) return;
         stopGPS();
         message(
           e.code === 1
@@ -603,7 +875,53 @@ export function mountMaps(root, { request, language }) {
       },
       { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
     );
+  }
+  q("[data-gps]").onclick = () => startGPS();
+  q("[data-my-location]").onclick = () => startGPS({ centre: true });
+  function centreOnMe() {
+    if (!map || !position) return;
+    if (engine === "google") {
+      map.panTo(position);
+      map.setZoom(Math.max(14, map.getZoom()));
+    } else
+      map.setView([position.lat, position.lng], Math.max(14, map.getZoom()));
+    canvas.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+  q("[data-notifications]").onclick = async () => {
+    if (!("Notification" in window)) {
+      message(
+        w(
+          "Use the on-screen alerts and sound on this browser.",
+          "Utilisez les alertes à l’écran et le son dans ce navigateur."
+        )
+      );
+      return;
+    }
+    try {
+      const permission = await Notification.requestPermission();
+      notificationsOn = permission === "granted";
+      message(
+        notificationsOn
+          ? w(
+              "Device notifications enabled while location updates are available. Keep the app open for reliable nearby alerts.",
+              "Notifications activées lorsque la position est disponible. Gardez l’application ouverte pour des alertes fiables."
+            )
+          : w(
+              "On-screen alerts remain available. Device notifications were not enabled.",
+              "Les alertes à l’écran restent disponibles. Notifications système non activées."
+            )
+      );
+    } catch {
+      message(
+        w(
+          "This browser requires installing the Maps app before enabling notifications.",
+          "Installez l’application Cartes pour activer les notifications dans ce navigateur."
+        )
+      );
+    }
   };
+  q("[data-add-site]").onclick = openMyLocation;
+  q("[data-visit-filter]").onchange = refresh;
   q("[data-stop]").onclick = () => {
     stopGPS();
     insideOnly = false;
@@ -624,6 +942,7 @@ export function mountMaps(root, { request, language }) {
   };
   q("[data-radius]").onchange = (e) => {
     radius = Number(e.target.value);
+    prefs.radius=radius;try{localStorage.setItem("sap-map-preferences",JSON.stringify({...prefs,analyst,radius,markerStyle}));}catch{}
     alerted.clear();
     refresh();
   };
@@ -658,7 +977,8 @@ export function mountMaps(root, { request, language }) {
     q("[data-search]").value = "";
     q("[data-gc]").value = "";
     q("[data-stage]").value = "";
-    visibleTiers = TIERS.filter((t) => t !== "Unqualified");
+    q("[data-visit-filter]").value = "";
+    visibleTiers = [...TIERS];
     root
       .querySelectorAll(".tier-controls input")
       .forEach((c) => (c.checked = visibleTiers.includes(c.value)));
@@ -699,18 +1019,30 @@ export function mountMaps(root, { request, language }) {
   q("[data-settings]").onclick = () =>
     dialog(
       w("View options", "Options d’affichage"),
-      `<label class="check-line"><input type="checkbox" data-analyst ${analyst ? "checked" : ""}> ${w("Analyst view: expand evidence and conflicts", "Vue analyste : développer les preuves et conflits")}</label><p>${w("Turning this off folds the evidence panel; it never removes sources. Preferences are saved only when you apply. GPS and leads are not saved in browser storage.", "Cette option replie les preuves sans les supprimer. Seul « Appliquer » enregistre les préférences. Le GPS et les pistes ne sont pas conservés dans le navigateur.")}</p><button class="button primary" data-apply>${w("Apply & close", "Appliquer et fermer")}</button>`,
-      (d) =>
-        (d.querySelector("[data-apply]").onclick = () => {
+      `<label class="check-line"><input type="checkbox" data-analyst ${analyst ? "checked" : ""}> ${w("Analyst view: expand evidence and conflicts", "Vue analyste : développer les preuves et conflits")}</label><p>${w("Turning this off folds the evidence panel; it never removes sources. Preferences are saved only when you apply. GPS and leads are not saved in browser storage.", "Cette option replie les preuves sans les supprimer. Seul « Appliquer » enregistre les préférences. Le GPS et les pistes ne sont pas conservés dans le navigateur.")}</p><label class="field"><span>${w("Construction marker", "Repère de chantier")}</span><select data-marker-style><option value="building">${w("Building pin", "Bâtiment")}</option><option value="hardhat">${w("Hard-hat pin", "Casque de chantier")}</option><option value="crane">${w("Crane pin", "Grue")}</option></select></label><label class="check-line"><input type="checkbox" data-keep-awake ${prefs.keepAwake ? "checked" : ""} ${!navigator.wakeLock ? "disabled" : ""}> ${w("Keep screen awake while nearby alerts are on", "Garder l’écran allumé pendant les alertes de proximité")}</label><button class="button secondary" type="button" data-enable-device-alerts>${w("Enable device notifications", "Activer les notifications système")}</button><button class="button primary" data-apply>${w("Apply & close", "Appliquer et fermer")}</button>`,
+      (d) => {
+        d.querySelector("[data-marker-style]").value = markerStyle;
+        d.querySelector("[data-enable-device-alerts]").onclick = () =>
+          q("[data-notifications]").click();
+        d.querySelector("[data-apply]").onclick = () => {
           analyst = d.querySelector("[data-analyst]").checked;
+          markerStyle = d.querySelector("[data-marker-style]").value;
+          prefs.keepAwake = d.querySelector("[data-keep-awake]").checked;
+          paint();
           try {
             localStorage.setItem(
               "sap-map-preferences",
-              JSON.stringify({ analyst, radius })
+              JSON.stringify({
+                analyst,
+                radius,
+                markerStyle,
+                keepAwake: prefs.keepAwake,
+              })
             );
           } catch {}
           d.close();
-        })
+        };
+      }
     );
   function download(name, content, type) {
     const url = URL.createObjectURL(new Blob([content], { type })),
@@ -726,18 +1058,24 @@ export function mountMaps(root, { request, language }) {
         "Research register · import / export",
         "Registre de recherche · importation / exportation"
       ),
-      `<p>${w("Exports contain private business research. Keep them in approved storage. Google location reviews and GPS are session-only and excluded.", "Les exports contiennent des renseignements commerciaux privés. Conservez-les dans un espace autorisé. Les vérifications Google et le GPS ne sont pas exportés.")}</p><div class="map-actions"><button class="button secondary" data-json>JSON · ${records.length}</button><button class="button secondary" data-csv>CSV · ${records.length}</button></div><hr><label class="field"><span>${w("Replace private research register", "Remplacer le registre privé")}</span><input type="file" accept=".json,.csv,application/json,text/csv" data-file></label><p>${w("Review validation and counts before confirming. The current version is preserved in the private audit history.", "Vérifiez la validation et les totaux avant de confirmer. La version actuelle reste dans l’historique privé.")}</p><div data-preview role="status"></div><button class="button primary" data-save disabled>${w("Confirm replacement", "Confirmer le remplacement")}</button>`,
+      `<p>${w("Exports contain private business research. Keep them in approved storage. Google location reviews and GPS are session-only and excluded.", "Les exports contiennent des renseignements commerciaux privés. Conservez-les dans un espace autorisé. Les vérifications Google et le GPS ne sont pas exportés.")}</p><div class="map-actions"><button class="button secondary" data-json>Research JSON · ${researchRecords.length}</button><button class="button secondary" data-field-backup>${w("Field work backup", "Sauvegarde terrain")}</button><button class="button secondary" data-csv>Research CSV · ${researchRecords.length}</button></div><hr><label class="field"><span>${w("Replace private research register", "Remplacer le registre privé")}</span><input type="file" accept=".json,.csv,application/json,text/csv" data-file></label><p>${w("Review validation and counts before confirming. The current version is preserved in the private audit history.", "Vérifiez la validation et les totaux avant de confirmer. La version actuelle reste dans l’historique privé.")}</p><div data-preview role="status"></div><button class="button primary" data-save disabled>${w("Confirm replacement", "Confirmer le remplacement")}</button>`,
       (d) => {
+        d.querySelector("[data-field-backup]").onclick = () =>
+          download(
+            "sap-private-field-work.json",
+            JSON.stringify({ fieldSites, activity }, null, 2),
+            "application/json"
+          );
         d.querySelector("[data-json]").onclick = () =>
           download(
             "sap-private-research.json",
-            JSON.stringify(records, null, 2),
+            JSON.stringify(researchRecords, null, 2),
             "application/json"
           );
         d.querySelector("[data-csv]").onclick = () =>
           download(
             "sap-private-research.csv",
-            csv(records),
+            csv(researchRecords),
             "text/csv;charset=utf-8"
           );
         let incoming = null;
@@ -776,7 +1114,8 @@ export function mountMaps(root, { request, language }) {
               }),
             });
             if (disposed) return;
-            records = incoming;
+            researchRecords = incoming;
+            rebuildRecords();
             version = r.version;
             reviews.clear();
             populate();
@@ -801,7 +1140,7 @@ export function mountMaps(root, { request, language }) {
   const authFailure = () => {
     if (disposed || engine !== "google") return;
     clearMarkers();
-    if(map)window.google?.maps.event.clearInstanceListeners(map);
+    if (map) window.google?.maps.event.clearInstanceListeners(map);
     map = null;
     canvas.innerHTML = `<div class="map-unavailable"><h3>${w("Google Maps unavailable", "Google Maps indisponible")}</h3><p>${w("The map provider rejected this page. The research list remains available.", "Le fournisseur a refusé cette page. La liste des recherches reste accessible.")}</p><button class="button secondary" data-fallback>${w("Open fallback map", "Ouvrir la carte de secours")}</button></div>`;
     canvas.querySelector("[data-fallback]").onclick = () => initMap("leaflet");
@@ -814,23 +1153,7 @@ export function mountMaps(root, { request, language }) {
   };
   window.addEventListener("sap-map-auth-failure", authFailure);
   const themeObserver = new MutationObserver(() => {
-    if (engine === "google" && map)
-      map.setOptions({
-        styles:
-          document.documentElement.dataset.theme === "dark"
-            ? [
-                { elementType: "geometry", stylers: [{ color: "#18243b" }] },
-                {
-                  elementType: "labels.text.fill",
-                  stylers: [{ color: "#adb7ca" }],
-                },
-                {
-                  elementType: "labels.text.stroke",
-                  stylers: [{ color: "#18243b" }],
-                },
-              ]
-            : null,
-      });
+    if (engine === "google" && map) initMap("google", { preserveView: true });
   });
   themeObserver.observe(document.documentElement, {
     attributes: true,
@@ -840,7 +1163,10 @@ export function mountMaps(root, { request, language }) {
     try {
       const data = await request("/admin/maps/dataset");
       if (!disposed) {
-        records = data.records;
+        researchRecords = data.records;
+        fieldSites = data.fieldSites || [];
+        activity = data.activity || {};
+        rebuildRecords();
         version = data.version;
         populate();
         refresh();
@@ -866,6 +1192,9 @@ export function mountMaps(root, { request, language }) {
     }
     reviews.clear();
     records = [];
+    researchRecords = [];
+    fieldSites = [];
+    activity = {};
     root.innerHTML = "";
   };
 }

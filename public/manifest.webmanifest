@@ -1,0 +1,38 @@
+{
+  "id": "./?workspace=maps",
+  "name": "SAP Service \u00b7 Maps & Field Radar",
+  "short_name": "SAP Maps",
+  "description": "Private SAP Service site map, nearby alerts and field visits.",
+  "start_url": "./?workspace=maps",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#111b2e",
+  "theme_color": "#1e2d53",
+  "icons": [
+    {
+      "src": "./brand/map-app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./brand/map-app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./brand/map-app-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
+}
