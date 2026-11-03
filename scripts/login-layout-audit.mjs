@@ -47,7 +47,7 @@ try {
         return {
           inner: [innerWidth, innerHeight],
           outer: [outerWidth, outerHeight],
-          horizontal: Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 2,
+          horizontal: Math.abs((r.left + r.right) / 2 - document.documentElement.clientWidth / 2) < 2,
           vertical:
             !fits ||
             Math.abs((r.top + r.bottom) / 2 - (h.bottom + innerHeight) / 2) < 2,

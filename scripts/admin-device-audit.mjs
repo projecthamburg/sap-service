@@ -179,6 +179,17 @@ for (const device of matrix) {
       throw Error("Timed out: " + script.slice(0, 120));
     };
     const click = async (selector) => {
+      if (
+        device.options.realMobile &&
+        device.browserName.toLowerCase() === "chrome" &&
+        (await exec(
+          "return !!visualViewport && visualViewport.height < innerHeight - 80 && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)"
+        ))
+      ) {
+        await exec("document.activeElement.blur();");
+        await pause(700);
+        entry.keyboardDismissals = (entry.keyboardDismissals || 0) + 1;
+      }
       await exec(
         'document.querySelector(arguments[0]).scrollIntoView({block:"center",behavior:"instant"});',
         [selector]
@@ -206,6 +217,7 @@ for (const device of matrix) {
     });
     await wd(`/session/${id}/url`, { url: new URL("#/en/admin", site).href });
     await wait('return !!document.querySelector(".admin-login")');
+    await wait('return document.fonts.status === "loaded"');
     entry.release = await exec(
       "return document.querySelector('meta[name=\"sap-build\"]').content"
     );
@@ -224,7 +236,7 @@ for (const device of matrix) {
     check(
       "Sign-in card is centered and clear of the header",
       await exec(
-        'const r=document.querySelector(".admin-login").getBoundingClientRect(),h=document.querySelector(".site-header").getBoundingClientRect();const fits=r.height+48<innerHeight-h.bottom;return Math.abs((r.left+r.right)/2-innerWidth/2)<2 && r.top>=h.bottom && (!fits || Math.abs((r.top+r.bottom)/2-(h.bottom+innerHeight)/2)<4)'
+        'const r=document.querySelector(".admin-login").getBoundingClientRect(),h=document.querySelector(".site-header").getBoundingClientRect();const fits=r.height+48<innerHeight-h.bottom;return Math.abs((r.left+r.right)/2-document.documentElement.clientWidth/2)<2 && r.top>=h.bottom && (!fits || Math.abs((r.top+r.bottom)/2-(h.bottom+innerHeight)/2)<4)'
       )
     );
     await click(".admin-login [type=submit]");
