@@ -5,7 +5,7 @@ import { resolve, extname } from "node:path";
 const base = "https://projecthamburg.github.io/sap-service/",
   staged = process.argv.includes("--staged"),
   account = JSON.parse(
-    await readFile(".local/admin-map/test-account.json", "utf8")
+    await readFile(".local/admin-map/test-account.json", "utf8"),
   ),
   api = JSON.parse(await readFile("api/deployment.json", "utf8")).apiUrl,
   output = resolve(".local/admin-map/field-pwa-audit");
@@ -20,7 +20,9 @@ const browser = await puppeteer.launch({
 const checks = [],
   errors = [],
   failedRequests = [];
-let bearer, siteId;
+let bearer,
+  siteId,
+  failNextDatasetRead = false;
 const check = (name, passed) => {
   checks.push({ name, passed: !!passed });
   console.log(`${passed ? "PASS" : "FAIL"} ${name}`);
@@ -52,42 +54,49 @@ async function pageFor(app) {
       return original(input, init);
     };
   }, api);
-  if (staged) {
-    await p.setBypassServiceWorker(true);
-    await p.setRequestInterception(true);
-    p.on("request", async (r) => {
-      const u = new URL(r.url());
-      if (
-        u.origin === new URL(base).origin &&
-        u.pathname.startsWith("/sap-service/")
-      ) {
-        const path =
-          decodeURIComponent(u.pathname.slice("/sap-service/".length)) ||
-          "index.html";
-        if (path.includes("..")) return r.abort();
-        try {
-          return r.respond({
-            status: 200,
-            contentType:
-              {
-                ".html": "text/html",
-                ".js": "application/javascript",
-                ".css": "text/css",
-                ".json": "application/json",
-                ".webmanifest": "application/manifest+json",
-                ".png": "image/png",
-                ".svg": "image/svg+xml",
-                ".woff2": "font/woff2",
-              }[extname(path)] || "application/octet-stream",
-            body: await readFile(resolve("dist", path)),
-          });
-        } catch {
-          return r.respond({ status: 404, body: "Not found" });
-        }
+  if (staged) await p.setBypassServiceWorker(true);
+  await p.setRequestInterception(true);
+  p.on("request", async (r) => {
+    if (
+      failNextDatasetRead &&
+      r.url() === api + "/admin/maps/dataset" &&
+      r.method() === "GET"
+    ) {
+      failNextDatasetRead = false;
+      return r.abort("connectionfailed");
+    }
+    const u = new URL(r.url());
+    if (
+      staged &&
+      u.origin === new URL(base).origin &&
+      u.pathname.startsWith("/sap-service/")
+    ) {
+      const path =
+        decodeURIComponent(u.pathname.slice("/sap-service/".length)) ||
+        "index.html";
+      if (path.includes("..")) return r.abort();
+      try {
+        return r.respond({
+          status: 200,
+          contentType:
+            {
+              ".html": "text/html",
+              ".js": "application/javascript",
+              ".css": "text/css",
+              ".json": "application/json",
+              ".webmanifest": "application/manifest+json",
+              ".png": "image/png",
+              ".svg": "image/svg+xml",
+              ".woff2": "font/woff2",
+            }[extname(path)] || "application/octet-stream",
+          body: await readFile(resolve("dist", path)),
+        });
+      } catch {
+        return r.respond({ status: 404, body: "Not found" });
       }
-      r.continue();
-    });
-  }
+    }
+    r.continue();
+  });
   await p.setViewport({ width: 390, height: 844 });
   const url = new URL(base);
   if (app) url.searchParams.set("workspace", "maps");
@@ -111,6 +120,33 @@ async function click(p, s) {
   await pause(100);
   await p.click(s);
 }
+function panelOverlaps() {
+  const selectors = [
+    ".map-app-search",
+    ".map-app-chips",
+    ".map-app-controls",
+    ".map-app-nearby",
+    ".lead-sidebar",
+    ".map-status",
+    ".map-focus-exit",
+  ];
+  const rects = selectors
+    .map((s) => [s, document.querySelector(s)?.getBoundingClientRect()])
+    .filter(([, r]) => r && r.width && r.height);
+  const collisions = [];
+  for (let i = 0; i < rects.length; i++)
+    for (let j = i + 1; j < rects.length; j++) {
+      const [a, r] = rects[i],
+        [b, s] = rects[j];
+      if (
+        Math.min(r.right, s.right) - Math.max(r.left, s.left) > 1 &&
+        Math.min(r.bottom, s.bottom) - Math.max(r.top, s.top) > 1
+      )
+        collisions.push(a + " / " + b);
+    }
+  return collisions;
+}
+
 try {
   const p = await pageFor(true);
   check(
@@ -119,8 +155,8 @@ try {
       () =>
         document.body.classList.contains("maps-app") &&
         getComputedStyle(document.querySelector(".map-layout")).position ===
-          "fixed"
-    )
+          "fixed",
+    ),
   );
   check(
     "Floating search and current-location control are visible",
@@ -129,12 +165,12 @@ try {
         document.querySelector(".map-app-search").getBoundingClientRect()
           .width > 200 &&
         document.querySelector("[data-my-location]").getBoundingClientRect()
-          .height >= 44
-    )
+          .height >= 44,
+    ),
   );
   await p.evaluate(() => (document.documentElement.dataset.theme = "dark"));
   await p.waitForFunction(
-    () => document.querySelector(".map-canvas").dataset.scheme === "dark"
+    () => document.querySelector(".map-canvas").dataset.scheme === "dark",
   );
   await pause(1500);
   check(
@@ -142,8 +178,8 @@ try {
     await p.evaluate(
       () =>
         document.querySelector(".map-canvas").dataset.scheme === "dark" &&
-        !document.querySelector(".map-canvas").textContent.includes("Oops!")
-    )
+        !document.querySelector(".map-canvas").textContent.includes("Oops!"),
+    ),
   );
   await p.screenshot({ path: resolve(output, "pwa-phone-night.png") });
   await browser
@@ -153,13 +189,13 @@ try {
   await p.waitForFunction(() =>
     document
       .querySelector(".map-status")
-      .textContent.includes("permission denied")
+      .textContent.includes("permission denied"),
   );
   check(
     "Location denial is explained without an invented position",
     await p.$eval("[data-radar-status]", (e) =>
-      e.textContent.includes("GPS off")
-    )
+      e.textContent.includes("GPS off"),
+    ),
   );
   await browser
     .defaultBrowserContext()
@@ -169,18 +205,18 @@ try {
   await p.waitForFunction(() =>
     document
       .querySelector("[data-radar-status]")
-      .textContent.includes("GPS active")
+      .textContent.includes("GPS active"),
   );
   check("My location activates live follow and nearby alerts", true);
   await p.select("[data-radius]", "1609.344");
   check(
     "One-mile alert radius is available",
-    await p.$eval("[data-radius]", (e) => e.value === "1609.344")
+    await p.$eval("[data-radius]", (e) => e.value === "1609.344"),
   );
   await p.select("[data-radius]", "3218.688");
   check(
     "Two-mile alert radius is available",
-    await p.$eval("[data-radius]", (e) => e.value === "3218.688")
+    await p.$eval("[data-radius]", (e) => e.value === "3218.688"),
   );
   await p.$eval("[data-add-site]", (e) => e.click());
   await p.waitForSelector("dialog [data-record-location]");
@@ -189,13 +225,13 @@ try {
   await click(p, "dialog [type=submit]");
   check(
     "Incomplete site capture requests a required name",
-    await p.$eval("dialog [name=name]", (e) => !e.validity.valid)
+    await p.$eval("dialog [name=name]", (e) => !e.validity.valid),
   );
   const name = "QA field capture " + Date.now();
   await p.type("dialog [name=name]", name);
   await p.type(
     "dialog [name=notes]",
-    "Synthetic browser audit only. Isolated from the operational register."
+    "Synthetic browser audit only. Isolated from the operational register.",
   );
   await click(p, "dialog [type=submit]");
   await p.waitForFunction(
@@ -204,7 +240,7 @@ try {
         .querySelector("dialog")
         ?.textContent.includes("QA field capture") &&
       !document.querySelector("dialog [data-new-site]"),
-    { timeout: 30000 }
+    { timeout: 30000 },
   );
   siteId = await p.$eval("dialog", (e) => e.dataset.recordId);
   check("GPS site is saved privately and opens its dossier", !!siteId);
@@ -217,7 +253,7 @@ try {
         e.value = v;
         e.dispatchEvent(new Event("input", { bubbles: true }));
       },
-      siteId
+      siteId,
     );
     if (await p.$("[data-sheet-toggle]"))
       await p.$eval(".lead-sidebar", (e) => e.classList.add("sheet-expanded"));
@@ -233,8 +269,8 @@ try {
       await p.$eval(
         "dialog .field-workflow strong",
         (e, v) => e.textContent === v,
-        expected
-      )
+        expected,
+      ),
     );
   }
   const href = await p.$eval("dialog [data-route]", (e) => e.href),
@@ -243,7 +279,7 @@ try {
     "Driving directions use GPS origin and car navigation",
     route.searchParams.get("origin") === "45.55,-73.55" &&
       route.searchParams.get("travelmode") === "driving" &&
-      route.searchParams.get("dir_action") === "navigate"
+      route.searchParams.get("dir_action") === "navigate",
   );
   await click(p, "dialog [data-close]");
   await p.$eval("[data-search]", (e) => {
@@ -266,42 +302,126 @@ try {
     check(
       `Standalone ${width} has no horizontal overflow`,
       await p.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth + 1
-      )
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
     );
-    const overlaps = await p.evaluate(() => {
-      const selectors = [
-        ".map-app-search",
-        ".map-app-chips",
-        ".map-app-controls",
-        ".map-app-nearby",
-        ".lead-sidebar",
-        ".map-status",
-      ];
-      const rects = selectors
-        .map((s) => [s, document.querySelector(s).getBoundingClientRect()])
-        .filter(([, r]) => r.width && r.height);
-      const collisions = [];
-      for (let i = 0; i < rects.length; i++)
-        for (let j = i + 1; j < rects.length; j++) {
-          const [a, r] = rects[i],
-            [b, s] = rects[j];
-          if (
-            Math.min(r.right, s.right) - Math.max(r.left, s.left) > 1 &&
-            Math.min(r.bottom, s.bottom) - Math.max(r.top, s.top) > 1
-          )
-            collisions.push(a + " / " + b);
-        }
-      return collisions;
-    });
+    const overlaps = await p.evaluate(panelOverlaps);
     check(
       `Standalone ${width}×${height} controls do not overlap: ${overlaps.join(", ") || "clear"}`,
-      overlaps.length === 0
+      overlaps.length === 0,
     );
     await p.screenshot({
       path: resolve(output, `pwa-${width}-${height}-night.png`),
     });
   }
+  await p.setViewport({ width: 390, height: 844 });
+  await click(p, "[data-map-fullscreen]");
+  await p.waitForFunction(() => document.body.classList.contains("map-focus"));
+  check(
+    "Fullscreen control expands the whole map workspace",
+    await p.evaluate(() => {
+      const r = document.querySelector(".map-layout").getBoundingClientRect();
+      return r.top === 0 && Math.abs(r.bottom - innerHeight) < 2;
+    }),
+  );
+  check(
+    "Fullscreen has an accessible exit",
+    await p.$eval(
+      ".map-focus-exit",
+      (e) => !e.hidden && !!e.getAttribute("aria-label"),
+    ),
+  );
+  for (const [width, height, top, bottom, left, right] of [
+    [390, 844, 0, 0, 0, 0],
+    [844, 390, 0, 0, 0, 0],
+    [667, 375, 0, 0, 0, 0],
+    [390, 300, 0, 0, 0, 0],
+    [390, 844, 44, 34, 0, 0],
+    [844, 390, 0, 21, 44, 44],
+  ]) {
+    await p.setViewport({ width, height });
+    await p.evaluate(
+      (values) => {
+        for (const [key, value] of Object.entries(values))
+          document.body.style.setProperty("--map-safe-" + key, value + "px");
+      },
+      { top, bottom, left, right },
+    );
+    await pause(300);
+    const overlap = await p.evaluate(panelOverlaps);
+    check(
+      `Fullscreen ${width}×${height} map fills the space above the site sheet`,
+      await p.evaluate(() => {
+        const canvas = document
+          .querySelector(".map-canvas")
+          .getBoundingClientRect();
+        const sheet = document
+          .querySelector(".lead-sidebar")
+          .getBoundingClientRect();
+        const safeBottom =
+          parseFloat(
+            getComputedStyle(document.body).getPropertyValue(
+              "--map-safe-bottom",
+            ),
+          ) || 0;
+        const expectedBottom =
+          innerWidth <= 760 ? sheet.top : innerHeight - safeBottom;
+        return Math.abs(canvas.bottom - expectedBottom) < 2 && canvas.top === 0;
+      }),
+    );
+    check(
+      `Fullscreen ${width}×${height} safe ${top}/${bottom}/${left}/${right} controls clear: ${overlap.join(",") || "clear"}`,
+      overlap.length === 0,
+    );
+    check(
+      `Fullscreen ${width} exit remains visible`,
+      await p.$eval(".map-focus-exit", (e) => {
+        const r = e.getBoundingClientRect();
+        return (
+          r.left >= 0 &&
+          r.right <= innerWidth &&
+          r.top >= 0 &&
+          r.bottom <= innerHeight
+        );
+      }),
+    );
+    await p.screenshot({
+      path: resolve(
+        output,
+        `fullscreen-${width}-${height}-safe-${top}-${bottom}.png`,
+      ),
+    });
+  }
+  await p.evaluate(() => {
+    for (const k of ["top", "bottom", "left", "right"])
+      document.body.style.removeProperty("--map-safe-" + k);
+  });
+  await click(p, ".map-focus-exit");
+  await p.waitForFunction(() => !document.body.classList.contains("map-focus"));
+  check(
+    "Leaving fullscreen restores app controls",
+    await p.$eval(
+      ".admin-toolbar",
+      (e) => getComputedStyle(e).display !== "none",
+    ),
+  );
+  await p.evaluate(() => {
+    window.__qaFullscreen = document.documentElement.requestFullscreen;
+    document.documentElement.requestFullscreen = () =>
+      Promise.reject(
+        new DOMException("Test unsupported fullscreen", "NotSupportedError"),
+      );
+  });
+  await click(p, "[data-map-fullscreen]");
+  await p.waitForFunction(
+    () => document.body.dataset.mapDisplay === "expanded",
+  );
+  check("Unsupported native fullscreen has an expanded-map fallback", true);
+  await click(p, ".map-focus-exit");
+  await p.evaluate(() => {
+    document.documentElement.requestFullscreen = window.__qaFullscreen;
+    delete window.__qaFullscreen;
+  });
   await p.setViewport({ width: 390, height: 844 });
   await click(p, ".map-app-search .map-app-icon:last-child");
   await p.waitForSelector("dialog [data-open-import]");
@@ -309,26 +429,36 @@ try {
   await p.waitForSelector("dialog [data-save]");
   check(
     "Phone app exposes research import and fieldwork backup through options",
-    true
+    true,
   );
   check(
     "Phone import remains disabled until a reviewed file is supplied",
-    await p.$eval("dialog [data-save]", (e) => e.disabled)
+    await p.$eval("dialog [data-save]", (e) => e.disabled),
   );
   await click(p, "dialog [data-close]");
+  failNextDatasetRead = true;
   await p.reload({ waitUntil: "networkidle2" });
+  await p.waitForSelector("[data-retry-sites]");
+  check(
+    "A temporary read failure offers a clear retry",
+    await p.$eval(".map-unavailable", (e) =>
+      e.textContent.includes("Reload sites"),
+    ),
+  );
+  await click(p, "[data-retry-sites]");
   await p.waitForSelector(".lead-row");
+  check("Retry reloads the real private sites", true);
   await p.$eval(
     "[data-search]",
     (e, v) => {
       e.value = v;
       e.dispatchEvent(new Event("input", { bubbles: true }));
     },
-    siteId
+    siteId,
   );
   check(
     "Saved field site survives a page reload",
-    await p.$$eval(".lead-row", (e) => e.length === 1)
+    await p.$$eval(".lead-row", (e) => e.length === 1),
   );
   const plain = await fetch(api + "/admin/maps/dataset", {
       headers: { Authorization: bearer },
@@ -336,7 +466,7 @@ try {
     normal = await plain.json();
   check(
     "Synthetic browser test site stays out of operational map",
-    !normal.fieldSites.some((s) => s.id === siteId)
+    !normal.fieldSites.some((s) => s.id === siteId),
   );
   await p.select("[data-radius]", "1609.344");
   await p.setGeolocation({ latitude: 45.5717, longitude: -73.55, accuracy: 8 });
@@ -344,12 +474,12 @@ try {
   await p.waitForFunction(() =>
     document
       .querySelector("[data-radar-status]")
-      .textContent.includes("GPS active")
+      .textContent.includes("GPS active"),
   );
   await pause(500);
   check(
     "A site 1.5 miles away does not alert within one mile",
-    await p.$eval(".radar-alert", (e) => e.hidden)
+    await p.$eval(".radar-alert", (e) => e.hidden),
   );
   await pause(16000);
   await p.select("[data-radius]", "3218.688");
@@ -359,13 +489,13 @@ try {
     await p.$eval(
       ".radar-alert",
       (e, name) => e.textContent.includes(name),
-      name
-    )
+      name,
+    ),
   );
   await click(p, ".radar-alert [data-dismiss]");
   check(
     "Nearby alert can be dismissed",
-    await p.$eval(".radar-alert", (e) => e.hidden)
+    await p.$eval(".radar-alert", (e) => e.hidden),
   );
   await p.setViewport({ width: 390, height: 844 });
   await p.$eval(".lead-sidebar", (e) => e.classList.add("sheet-expanded"));
@@ -373,15 +503,15 @@ try {
     "Expanded mobile list hides map status overlay",
     await p.$eval(
       ".map-status",
-      (e) => getComputedStyle(e).visibility === "hidden"
-    )
+      (e) => getComputedStyle(e).visibility === "hidden",
+    ),
   );
   await p.$eval(".lead-sidebar", (e) => e.classList.remove("sheet-expanded"));
   await click(p, "[data-layers]");
   await pause(1500);
   check(
     "Satellite layer remains an interactive Google map",
-    await p.$eval(".gm-style", (e) => e.getBoundingClientRect().height > 100)
+    await p.$eval(".gm-style", (e) => e.getBoundingClientRect().height > 100),
   );
   await click(p, "[data-layers]");
   const desktop = await pageFor(false);
@@ -392,8 +522,8 @@ try {
       () =>
         !document.body.classList.contains("maps-app") &&
         getComputedStyle(document.querySelector(".site-footer")).display !==
-          "none"
-    )
+          "none",
+    ),
   );
   await desktop.screenshot({
     path: resolve(output, "admin-desktop.png"),
@@ -407,7 +537,7 @@ try {
     if (p.url().startsWith(base)) {
       try {
         console.log(
-          (await p.$eval("#admin-body", (e) => e.innerText)).slice(0, 1400)
+          (await p.$eval("#admin-body", (e) => e.innerText)).slice(0, 1400),
         );
         await p.screenshot({ path: resolve(output, "failure.png") });
       } catch {}
@@ -425,9 +555,9 @@ try {
     JSON.stringify(
       { checks, errors, failedRequests, at: new Date().toISOString() },
       null,
-      2
+      2,
     ),
-    { mode: 0o600 }
+    { mode: 0o600 },
   );
   await browser.close();
 }

@@ -59,6 +59,13 @@ export function setupAppLayout(root, w) {
   nearby.append(q("[data-stop]"));
   nearby.append(q("[data-radar-status]"));
   panel.append(nearby);
+  const radarObserver = new ResizeObserver(() =>
+    panel.style.setProperty(
+      "--map-radar-height",
+      nearby.getBoundingClientRect().height + "px"
+    )
+  );
+  radarObserver.observe(nearby);
   const aside = q(".lead-sidebar"),
     toggle = document.createElement("button");
   toggle.type = "button";
@@ -76,4 +83,5 @@ export function setupAppLayout(root, w) {
   importButton.textContent = w("Import / export", "Importer / exporter");
   importButton.onclick = () => q("[data-import]").click();
   panel.append(importButton);
+  return () => radarObserver.disconnect();
 }

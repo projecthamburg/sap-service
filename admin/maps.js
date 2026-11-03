@@ -1,3 +1,4 @@
+import { bindMapFullscreen } from "./fullscreen.js";
 import { setupAppLayout } from "./app-layout.js";
 import {
   siteTitle,
@@ -88,8 +89,9 @@ export function mountMaps(root, { request, language }) {
     status = q(".map-status"),
     canvas = q(".map-canvas");
   q("[data-radius]").value = String(radius);
+  let disposeAppLayout = () => {};
   if (isMapsApp()) {
-    setupAppLayout(root, w);
+    disposeAppLayout = setupAppLayout(root, w);
     q("[data-filter-panel]").open = false;
     q(".map-layout").dataset.layout = "map";
     root
@@ -101,6 +103,20 @@ export function mountMaps(root, { request, language }) {
   function message(s) {
     if (!disposed) status.textContent = s;
   }
+  const disposeFullscreen = isMapsApp()
+    ? bindMapFullscreen(
+        root.closest(".admin-portal")?.querySelector("[data-map-fullscreen]"),
+        { language, onInfo: message }
+      )
+    : () => {};
+  const resizeMap = () => {
+    if (!map || disposed) return;
+    if (engine === "google") window.google?.maps.event.trigger(map, "resize");
+    else map.invalidateSize();
+  };
+  window.addEventListener("sap-map-layout", resizeMap);
+  const mapSizeObserver = new ResizeObserver(resizeMap);
+  mapSizeObserver.observe(canvas);
   function rebuildRecords() {
     records = [...researchRecords, ...fieldSites.map(fieldLead)];
   }
@@ -626,14 +642,6 @@ export function mountMaps(root, { request, language }) {
         d.addEventListener("close", () => cardHeaderObserver.disconnect(), {
           once: true,
         });
-        d.querySelector("[data-review-record]")?.addEventListener(
-          "click",
-          () => {
-            const record = d.querySelector("[data-full-record]");
-            record.open = true;
-            record.scrollIntoView({ block: "start", behavior: "instant" });
-          }
-        );
         d.querySelectorAll("[data-set-visit]").forEach(
           (b) =>
             (b.onclick = async () => {
@@ -1261,7 +1269,7 @@ export function mountMaps(root, { request, language }) {
     attributes: true,
     attributeFilter: ["data-theme"],
   });
-  (async () => {
+  async function loadSites() {
     try {
       const data = await request("/admin/maps/dataset");
       if (!disposed) {
@@ -1275,13 +1283,29 @@ export function mountMaps(root, { request, language }) {
         await initMap("google");
       }
     } catch (e) {
-      message(e.message);
+      if (disposed) return;
+      message(
+        w(
+          "Sites couldn’t load. Please retry.",
+          "Impossible de charger les sites. Réessayez."
+        )
+      );
+      canvas.innerHTML = `<div class="map-unavailable"><h3>${w("Let’s try again", "Réessayons")}</h3><p>${w("Check your connection, then reload your sites.", "Vérifiez votre connexion, puis rechargez vos sites.")}</p><button class="button primary" data-retry-sites>${w("Reload sites", "Recharger les sites")}</button></div>`;
+      canvas.querySelector("[data-retry-sites]").onclick = (e) => {
+        e.currentTarget.disabled = true;
+        loadSites();
+      };
     }
-  })();
+  }
+  loadSites();
   return () => {
     if (disposed) return;
     disposed = true;
     mapGeneration++;
+    disposeFullscreen();
+    disposeAppLayout();
+    mapSizeObserver.disconnect();
+    window.removeEventListener("sap-map-layout", resizeMap);
     stopGPS();
     window.removeEventListener("sap-map-auth-failure", authFailure);
     themeObserver.disconnect();

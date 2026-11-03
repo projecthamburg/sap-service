@@ -20,8 +20,9 @@ try {
     const url = new URL(base);
     if (app) url.searchParams.set("workspace", "maps");
     url.hash = "/en/admin/maps";
-    await p.goto(url.href, { waitUntil: "networkidle2" });
+    await p.goto(url.href, { waitUntil: "domcontentloaded" });
     await p.waitForSelector(".admin-login");
+    await p.evaluate(() => document.fonts.ready);
     for (const [width, height] of [
       [1800, 1000],
       [1200, 900],
@@ -47,7 +48,10 @@ try {
         return {
           inner: [innerWidth, innerHeight],
           outer: [outerWidth, outerHeight],
-          horizontal: Math.abs((r.left + r.right) / 2 - document.documentElement.clientWidth / 2) < 2,
+          horizontal:
+            Math.abs(
+              (r.left + r.right) / 2 - document.documentElement.clientWidth / 2,
+            ) < 2,
           vertical:
             !fits ||
             Math.abs((r.top + r.bottom) / 2 - (h.bottom + innerHeight) / 2) < 2,
@@ -65,7 +69,7 @@ try {
         r.horizontal && r.vertical && r.belowHeader && r.withinViewport
           ? "PASS"
           : "FAIL",
-        JSON.stringify(r)
+        JSON.stringify(r),
       );
       await p.screenshot({
         path: `.local/admin-map/native-resize/${app ? "pwa" : "admin"}-${width}-${height}.png`,
@@ -79,9 +83,9 @@ try {
               maxElements: 300,
             }),
             null,
-            2
+            2,
           ),
-          { mode: 0o600 }
+          { mode: 0o600 },
         );
     }
   }
@@ -90,12 +94,12 @@ try {
   await writeFile(
     ".local/admin-map/native-resize/report.json",
     JSON.stringify(results, null, 2),
-    { mode: 0o600 }
+    { mode: 0o600 },
   );
 }
 if (
   results.some(
-    (r) => !r.horizontal || !r.vertical || !r.belowHeader || !r.withinViewport
+    (r) => !r.horizontal || !r.vertical || !r.belowHeader || !r.withinViewport,
   )
 )
   process.exitCode = 1;

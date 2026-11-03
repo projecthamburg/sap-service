@@ -24,7 +24,7 @@ try {
   await page.setViewport({ width: 390, height: 844 });
   const url = new URL(base);
   url.searchParams.set("workspace", "maps");
-  await page.goto(url.href, { waitUntil: "networkidle2", timeout: 60000 });
+  await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 60000 });
   await page.waitForSelector(".admin-login");
   release = await page.$eval('meta[name="sap-build"]', (e) => e.content);
   check(
@@ -33,8 +33,8 @@ try {
       () =>
         document.body.classList.contains("maps-app") &&
         location.hash.endsWith("/admin/maps") &&
-        !document.querySelector(".lead-row")
-    )
+        !document.querySelector(".lead-row"),
+    ),
   );
   const cdp = await page.createCDPSession();
   const manifest = await cdp.send("Page.getAppManifest");
@@ -44,7 +44,7 @@ try {
     "App has its own map start URL and standalone display",
     app.display === "standalone" &&
       app.start_url.includes("workspace=maps") &&
-      app.id.includes("workspace=maps")
+      app.id.includes("workspace=maps"),
   );
   for (const icon of app.icons) {
     const size = await page.evaluate(async (src) => {
@@ -55,7 +55,7 @@ try {
     }, new URL(icon.src, manifest.url).href);
     check(
       `Launcher ${icon.sizes} (${icon.purpose}) decodes`,
-      icon.sizes === `${size[0]}x${size[1]}`
+      icon.sizes === `${size[0]}x${size[1]}`,
     );
   }
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -63,15 +63,15 @@ try {
   check(
     "Service worker controls the app in the repository scope",
     await page.evaluate(() =>
-      navigator.serviceWorker.controller.scriptURL.endsWith("/sw.js")
-    )
+      navigator.serviceWorker.controller.scriptURL.endsWith("/sw.js"),
+    ),
   );
   const install = await cdp.send("Page.getInstallabilityErrors");
   check(
     "Chrome reports no installability errors",
-    install.installabilityErrors.length === 0
+    install.installabilityErrors.length === 0,
   );
-  await page.reload({ waitUntil: "networkidle2" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector(".admin-login");
   const cached = await page.evaluate(async () => {
     const entries = [];
@@ -83,7 +83,7 @@ try {
   check(
     "Cache contains public shell assets",
     cached.some((u) => u.includes("/admin/portal.js")) &&
-      cached.some((u) => u.includes("/src/app.js"))
+      cached.some((u) => u.includes("/src/app.js")),
   );
   check(
     "Cache excludes APIs, identity requests and private records",
@@ -93,10 +93,10 @@ try {
         parsed.origin === base.origin &&
         !/admin-auth|submissions|field-sites|dataset|cognito|lambda-url/.test(u)
       );
-    })
+    }),
   );
   await page.setOfflineMode(true);
-  await page.reload({ waitUntil: "networkidle2" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector("[data-retry-offline]");
   check(
     "Offline launch explains that private data needs internet",
@@ -104,8 +104,8 @@ try {
       ".admin-login",
       (e) =>
         e.textContent.includes("Connect to continue") &&
-        !document.querySelector(".lead-row")
-    )
+        !document.querySelector(".lead-row"),
+    ),
   );
   await page.screenshot({ path: resolve(output, "offline-phone.png") });
   await page.setOfflineMode(false);
@@ -134,9 +134,9 @@ try {
         errors,
       },
       null,
-      2
+      2,
     ),
-    { mode: 0o600 }
+    { mode: 0o600 },
   );
 }
 if (checks.some((c) => !c.passed)) process.exitCode = 1;

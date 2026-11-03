@@ -70,9 +70,10 @@ try {
       for (const width of [390, 1440]) {
         await page.setViewport({ width, height: 1000 });
         await page.goto(new URL("#/" + language + "/", base).href, {
-          waitUntil: "networkidle2",
+          waitUntil: "domcontentloaded",
           timeout: 60000,
         });
+        await page.waitForSelector(".comparison-view");
         await page.evaluate((theme) => {
           document.documentElement.dataset.theme = theme;
         }, theme);
@@ -87,24 +88,24 @@ try {
                 width: image.naturalWidth,
                 height: image.naturalHeight,
               };
-            })
-          )
+            }),
+          ),
         );
         if (!photographs.length || photographs.some((image) => !image.width))
           throw Error("A public photograph failed to decode before capture.");
         const name = `${language}-${theme}-${width}`;
         await page.$eval(".comparison-view", (e) =>
-          e.scrollIntoView({ behavior: "instant", block: "center" })
+          e.scrollIntoView({ behavior: "instant", block: "center" }),
         );
         await page.$eval('[data-comparison="condo"]', (e) => e.click());
         await page.waitForFunction(() =>
           getComputedStyle(
-            document.querySelector(".comparison-after")
-          ).backgroundImage.includes("/cleaning-comparison.webp")
+            document.querySelector(".comparison-after"),
+          ).backgroundImage.includes("/cleaning-comparison.webp"),
         );
         await page.$eval(".comparison-after", async (e) => {
           const url = getComputedStyle(e).backgroundImage.match(
-            /^url\(["']?(.*?)["']?\)$/
+            /^url\(["']?(.*?)["']?\)$/,
           )?.[1];
           const image = new Image();
           image.src = url;
@@ -115,7 +116,7 @@ try {
         });
         await writeFile(
           resolve(output, name + "-before.json"),
-          JSON.stringify(before, null, 2)
+          JSON.stringify(before, null, 2),
         );
         await page.screenshot({ path: resolve(output, name + "-before.png") });
         const selector = '[data-comparison="fitness"]';
@@ -128,13 +129,13 @@ try {
               .querySelector('[data-comparison="fitness"]')
               .getAttribute("aria-pressed") === "true" &&
             getComputedStyle(
-              document.querySelector(".comparison-after")
-            ).backgroundImage.includes("/cleaning-fitness.webp")
+              document.querySelector(".comparison-after"),
+            ).backgroundImage.includes("/cleaning-fitness.webp"),
         );
         await page.$eval(".comparison-after", async (e) => {
           const image = new Image();
           image.src = getComputedStyle(e).backgroundImage.match(
-            /^url\(["']?(.*?)["']?\)$/
+            /^url\(["']?(.*?)["']?\)$/,
           )[1];
           await image.decode();
         });
@@ -144,11 +145,11 @@ try {
         const diff = diffCaptures(before, after);
         await writeFile(
           resolve(output, name + "-after.json"),
-          JSON.stringify(after, null, 2)
+          JSON.stringify(after, null, 2),
         );
         await writeFile(
           resolve(output, name + "-diff.json"),
-          JSON.stringify(diff, null, 2)
+          JSON.stringify(diff, null, 2),
         );
         await page.screenshot({ path: resolve(output, name + "-after.png") });
         await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
@@ -189,7 +190,7 @@ try {
           "brand IoU",
           brand.intersectionOverUnion.toFixed(4),
           "changed nodes",
-          diff.changed.length
+          diff.changed.length,
         );
       }
   manifest.status = "complete";
@@ -202,12 +203,12 @@ try {
   manifest.finishedAt = new Date().toISOString();
   await writeFile(
     resolve(output, "run_manifest.json"),
-    JSON.stringify(manifest, null, 2)
+    JSON.stringify(manifest, null, 2),
   );
   await mkdir(".local/domscan", { recursive: true });
   await writeFile(
     ".local/domscan/latest.json",
-    JSON.stringify({ run: output, status: manifest.status }, null, 2)
+    JSON.stringify({ run: output, status: manifest.status }, null, 2),
   );
   await browser.close();
 }

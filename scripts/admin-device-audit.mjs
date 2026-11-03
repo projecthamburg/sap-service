@@ -37,12 +37,32 @@ const matrix = [
     options: { deviceName: "iPhone 16", osVersion: "18", realMobile: true },
   },
   {
+    name: "iphone-safari-landscape",
+    browserName: "safari",
+    options: {
+      deviceName: "iPhone 16",
+      osVersion: "18",
+      realMobile: true,
+      deviceOrientation: "landscape",
+    },
+  },
+  {
     name: "android-chrome",
     browserName: "chrome",
     options: {
       deviceName: "Samsung Galaxy S23",
       osVersion: "13.0",
       realMobile: true,
+    },
+  },
+  {
+    name: "android-chrome-landscape",
+    browserName: "chrome",
+    options: {
+      deviceName: "Samsung Galaxy S23",
+      osVersion: "13.0",
+      realMobile: true,
+      deviceOrientation: "landscape",
     },
   },
   {
@@ -181,7 +201,6 @@ for (const device of matrix) {
     const click = async (selector) => {
       if (
         device.options.realMobile &&
-        device.browserName.toLowerCase() === "chrome" &&
         (await exec(
           "return !!visualViewport && visualViewport.height < innerHeight - 80 && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)"
         ))
@@ -322,6 +341,18 @@ for (const device of matrix) {
     await click(".lead-row");
     await wait('return !!document.querySelector("dialog[open]")');
     check(
+      "Field card hides internal research until requested",
+      await exec(
+        'return !document.querySelector("dialog [data-full-record]").open && !document.querySelector("dialog [data-original-record]").open && !/SAP-C\\d|\\/100|\\[CONFIRMED\\]/.test(document.querySelector("dialog").innerText)'
+      )
+    );
+    check(
+      "Directions and visit actions fit the first card screen",
+      await exec(
+        'return [...document.querySelectorAll("dialog .visit-actions button,dialog [data-route]")].every(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})'
+      )
+    );
+    check(
       "Dossier keeps evidence and sources",
       await exec(
         'return !!document.querySelector("dialog details") && document.querySelectorAll("dialog details li").length>0'
@@ -415,6 +446,34 @@ for (const device of matrix) {
       );
       await capture("pwa-" + theme);
     }
+    await click("[data-map-fullscreen]");
+    await wait(
+      'return document.body.classList.contains("map-focus") && !document.querySelector(".map-focus-exit").hidden'
+    );
+    entry.fullscreen = await exec(
+      "return {mode:document.body.dataset.mapDisplay,native:!!document.fullscreenElement,width:innerWidth,height:innerHeight}"
+    );
+    check(
+      "Expanded map fills the available viewport",
+      await exec(
+        'const r=document.querySelector(".map-layout").getBoundingClientRect();return Math.abs(r.top)<1 && Math.abs(r.bottom-innerHeight)<2'
+      )
+    );
+    check(
+      "Expanded map retains location, layers and an exit",
+      await exec(
+        'return ["[data-my-location]","[data-layers]",".map-focus-exit"].every(s=>{const r=document.querySelector(s).getBoundingClientRect();return r.width>=44&&r.height>=44&&r.top>=0&&r.bottom<=innerHeight})'
+      )
+    );
+    await capture("pwa-fullscreen");
+    await click(".map-focus-exit");
+    await wait('return !document.body.classList.contains("map-focus")');
+    check(
+      "Fullscreen exit restores the toolbar",
+      await exec(
+        'return getComputedStyle(document.querySelector(".admin-toolbar")).display!=="none"'
+      )
+    );
     if (await exec("return innerWidth<=760")) {
       await click("[data-sheet-toggle]");
       check(

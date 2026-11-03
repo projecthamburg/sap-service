@@ -45,6 +45,14 @@ export function dossierHTML(
     value
       ? `<div class="dossier-field"><dt>${esc(w(label, labels[label] || label))}</dt><dd>${esc(Array.isArray(value) ? value.join(" · ") : String(value))}</dd></div>`
       : "";
+  const clean = (label, value) =>
+    text(
+      label,
+      readable(Array.isArray(value) ? value.join(" · ") : value || "").replace(
+        /\bUNCONFIRMED\b/g,
+        w("not yet checked", "à vérifier")
+      )
+    );
   const citations = (items) =>
     `<ul>${(items || []).map((s) => `<li>${citationHTML(s)}</li>`).join("")}</ul>`;
   const contacts = contactOptions(r),
@@ -91,16 +99,19 @@ export function dossierHTML(
     </section>
     <dl class="site-quick-facts"><div><dt>${w("Company", "Entreprise")}</dt><dd>${company !== w("Not listed", "Non indiqué") ? `<button class="site-company" data-group title="${esc(w("See this company’s other sites", "Voir les autres sites de cette entreprise"))}">${esc(company)}</button>` : esc(company)}</dd></div><div><dt>${w("Project stage", "Étape du projet")}</dt><dd>${esc(stageLabel(r.project_stage, w))}</dd></div>${date ? `<div><dt>${r.follow_up_date ? w("Follow-up", "Suivi") : w("Tender date", "Date d’appel d’offres")}</dt><dd>${esc(date)}</dd></div>` : ""}</dl>
 
-    ${r.conflicts?.length ? `<button class="site-review-link" data-review-record>${w("Details to check", "Détails à vérifier")}</button>` : ""}
-    <details class="site-record" data-full-record ${analyst ? "open" : ""}><summary>${w("Full project record", "Dossier complet du projet")}</summary>
+    <details class="site-record" data-full-record ${analyst ? "open" : ""}><summary>${w("Project details", "Détails du projet")}</summary>
+      <dl>${clean("Description", r.project_description)}${clean("Cleaning scope", r.cleaning_specifics)}${clean("Address", r.site_address)}${clean("City / region", [r.city, r.region].filter(Boolean))}${clean("Contact", [r.contact_name, r.contact_role, r.contact_company].filter(Boolean))}</dl>
+      <div class="dossier-actions">${[...contacts.phones, ...contacts.emails].map((c) => `<a class="button secondary" href="${esc(c.href)}">${esc(c.label)}</a>`).join("")}</div>
+      <div class="dossier-actions">${p ? `<button class="button secondary" data-street>Street View</button><button class="button secondary" data-pin-anchor>${w("Set nearby area here", "Centrer la zone ici")}</button>` : ""}<button class="button secondary" data-locate>${w("Check address on Google", "Vérifier l’adresse avec Google")}</button></div>
+      <p data-location-status role="status">${reviewed ? w("Address located this session.", "Adresse repérée pour cette session.") : ""}</p><div data-street-view></div>
+      <details class="internal-record" data-original-record ${analyst ? "open" : ""}><summary>${r.isFieldSite ? w("Saved site record", "Dossier du site enregistré") : w("Original research record", "Dossier de recherche original")}</summary>
       <p class="research-meta">${esc(r.lead_id)} · ${esc(r.priority)} · ${r.opportunity_score}/100</p>
       <p class="evidence-note">${w("These are potential opportunities. Check the project, location and cleaning scope before making commitments.", "Il s’agit d’occasions potentielles. Vérifiez le projet, le lieu et la portée du nettoyage avant de vous engager.")}</p>
-      <div class="dossier-actions">${p ? `<button class="button secondary" data-street>Street View</button><button class="button secondary" data-pin-anchor>${w("Set nearby area here", "Centrer la zone ici")}</button>` : ""}<button class="button secondary" data-locate>${w("Check address on Google", "Vérifier l’adresse avec Google")}</button><a class="button secondary" href="https://schedule.projecthamburg.com/booking/sap-service-cleanup" target="_blank" rel="noopener noreferrer">${w("Consultation calendar", "Calendrier de consultation")}</a></div>
       <h4>${w("Project", "Projet")}</h4><dl>${text("Project name", r.project_name)}${text("Project type", r.project_type)}${text("Owner / developer", r.owner_developer)}${text("General contractor", r.general_contractor)}${text("Stage", r.project_stage)}${text("Description", r.project_description)}${text("Cleaning scope", r.cleaning_specifics)}</dl>
-      <h4>${w("Location", "Lieu")}</h4><dl>${text("Address", r.site_address)}${text("City / region", `${r.city} · ${r.region}`)}${text("Location notes", r.site_location_description)}${text("Coordinate basis", r.coordinates_basis)}${text("Research coordinates", point(r) ? `${r.latitude_estimate}, ${r.longitude_estimate}` : "Not located")}</dl><p data-location-status role="status">${reviewed ? w("Address located this session.", "Adresse repérée pour cette session.") : ""}</p><div data-street-view></div>
-      <h4>${w("Contacts", "Contacts")}</h4><dl>${text("Procurement chain", r.procurement_chain)}${text("Contact", [r.contact_name, r.contact_role, r.contact_company].filter(Boolean).join(" · "))}${text("Emails", r.emails)}${text("Telephones", r.telephones)}</dl><div class="dossier-actions">${[...contacts.phones, ...contacts.emails].map((c) => `<a class="button secondary" href="${esc(c.href)}">${esc(c.label)}</a>`).join("")}</div>
+      <h4>${w("Location", "Lieu")}</h4><dl>${text("Address", r.site_address)}${text("City / region", `${r.city} · ${r.region}`)}${text("Location notes", r.site_location_description)}${text("Coordinate basis", r.coordinates_basis)}${text("Research coordinates", point(r) ? `${r.latitude_estimate}, ${r.longitude_estimate}` : "Not located")}</dl>      <h4>${w("Contacts", "Contacts")}</h4><dl>${text("Procurement chain", r.procurement_chain)}${text("Contact", [r.contact_name, r.contact_role, r.contact_company].filter(Boolean).join(" · "))}${text("Emails", r.emails)}${text("Telephones", r.telephones)}</dl><div class="dossier-actions">${[...contacts.phones, ...contacts.emails].map((c) => `<a class="button secondary" href="${esc(c.href)}">${esc(c.label)}</a>`).join("")}</div>
       <h4>${w("Dates & next steps", "Dates et prochaines étapes")}</h4><dl>${text("Start date", r.start_date)}${text("Deadline", deadlineLabel(r.deadline))}${text("Deadline meaning", r.deadline_type)}${text("Follow-up", deadlineLabel(r.follow_up_date))}${text("Timeline notes", r.timeline_notes)}${text("Next action", r.next_action)}</dl>
       <h4>${w("Internal research", "Recherche interne")}</h4><dl>${text("Evidence confidence", r.evidence_confidence)}${text("Assessment", r.argon_view)}</dl><details><summary>${w("Sources & review notes", "Sources et notes de vérification")}</summary>${r.conflicts?.length ? citations(r.conflicts) : ""}${citations(r.sources)}${citations(r.source_ids)}</details>
+      </details>
     </details>
   </article>`;
 }

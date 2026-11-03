@@ -177,6 +177,7 @@ try {
   await page.type("[data-search]", "SAP-C005");
   await click(".lead-row");
   await page.waitForSelector("dialog[open]");
+  await click("dialog [data-full-record] > summary");
   await click("dialog [data-locate]");
   await page.waitForFunction(
     () =>
@@ -367,7 +368,7 @@ try {
   await click(".lead-row");
   check(
     "Cancelled settings do not change evidence view",
-    await page.$eval("dialog details", (e) => e.open)
+    await page.$eval("dialog [data-full-record]", (e) => !e.open)
   );
   await click("dialog [data-close]");
   for (const width of [1440, 1024, 768, 390])

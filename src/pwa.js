@@ -10,6 +10,13 @@ export const isMapsApp = () =>
   new URLSearchParams(location.search).get("workspace") === "maps" ||
   matchMedia("(display-mode: standalone)").matches;
 export async function prepareMapsApp() {
+  if (isMapsApp())
+    document
+      .querySelector('meta[name="viewport"]')
+      ?.setAttribute(
+        "content",
+        "width=device-width, initial-scale=1, viewport-fit=cover"
+      );
   if ("serviceWorker" in navigator && isSecureContext)
     try {
       await navigator.serviceWorker.register("./sw.js", { scope: "./" });
