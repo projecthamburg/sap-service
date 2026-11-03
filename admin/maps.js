@@ -548,9 +548,11 @@ export function mountMaps(root, { request, language }) {
           center: { lat: 45.51, lng: -73.57 },
           zoom: 9,
           mapTypeControl: !isMapsApp(),
-          streetViewControl: true,
+          streetViewControl: !isMapsApp(),
+          cameraControl: !isMapsApp(),
+          zoomControl: !isMapsApp(),
           fullscreenControl: !isMapsApp(),
-          gestureHandling: "cooperative",
+          gestureHandling: isMapsApp() ? "greedy" : "cooperative",
           colorScheme:
             document.documentElement.dataset.theme === "dark"
               ? ColorScheme.DARK

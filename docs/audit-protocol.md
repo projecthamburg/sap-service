@@ -35,3 +35,10 @@ Keep authenticated screenshots, DOM evidence, dataset snapshots, test credential
 
 
 The real Android negative-flow investigation records trusted pointer/click events and both layout/visual viewports. When the keyboard was open, an automated recovery tap landed on a background DIV as the visible viewport expanded; the recovery handler was intact, and the next tap delivered to the button opened it without errors. The device harness now models dismissing the keyboard before navigating away from an invalid input. It still uses a native WebDriver tap, validates the actual error state and does not invoke the recovery handler through JavaScript. Windows centering is measured against `document.documentElement.clientWidth`, excluding its classic scrollbar, rather than treating scrollbar space as usable content width. Keep those harness corrections separate from product fixes in acceptance records.
+
+## Full-screen and field-card acceptance
+
+For the map app, compare the map canvas bottom with the collapsed site sheet, not just the outer workspace. A screenshot review found an inherited phone `max-height: 60dvh` that passed panel-intersection tests while leaving a blank band. The app now removes that cap; geometry assertions cover the actual canvas. Test full-screen entry/exit, denied/unsupported native API fallback, short windows, portrait/landscape and simulated cutout insets separately. Insets simulated in Chrome are geometry tests, not evidence of an installed iPhone app.
+
+Field-card acceptance checks driving and visit actions in the first screen, folded research by default, retained full records, and sticky directions while expanded details scroll. Permission-denied text must be visible to a sighted user, not merely present in a clipped live region. Connection tests separately interrupt a session read and a dataset read, then use the displayed Retry control to recover real data. Record genuine network failures and rerun acceptance; do not turn an interrupted flow into a passing count. No mutation is automatically retried.
+
