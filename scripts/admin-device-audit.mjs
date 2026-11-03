@@ -468,7 +468,7 @@ for (const device of matrix) {
     check(
       "Map canvas fills the expanded workspace",
       await exec(
-        'const c=document.querySelector(".map-canvas").getBoundingClientRect(),s=document.querySelector(".lead-sidebar").getBoundingClientRect(),b=parseFloat(getComputedStyle(document.body).getPropertyValue("--map-safe-bottom"))||0;return Math.abs(c.top)<1&&Math.abs(c.bottom-(innerWidth<=760?s.top:innerHeight-b))<2'
+        'const c=document.querySelector(".map-canvas").getBoundingClientRect(),s=document.querySelector(".lead-sidebar").getBoundingClientRect(),v=getComputedStyle(document.body),b=parseFloat(v.getPropertyValue("--map-safe-bottom"))||0,l=parseFloat(v.getPropertyValue("--map-safe-left"))||0,r=parseFloat(v.getPropertyValue("--map-safe-right"))||0;return Math.abs(c.top)<1&&Math.abs(c.bottom-(innerWidth<=760?s.top:innerHeight-b))<2&&(innerWidth<=760||(s.left>=l&&s.right<=innerWidth-r))'
       )
     );
     await capture("pwa-fullscreen");

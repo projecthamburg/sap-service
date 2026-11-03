@@ -20,10 +20,7 @@ const browser = await puppeteer.launch({
 const checks = [],
   errors = [],
   failedRequests = [];
-let bearer,
-  siteId,
-  failNextSessionRead = false,
-  failNextDatasetRead = false;
+let bearer, siteId;
 const check = (name, passed) => {
   checks.push({ name, passed: !!passed });
   console.log(`${passed ? "PASS" : "FAIL"} ${name}`);
@@ -47,6 +44,11 @@ async function pageFor(app) {
     const original = window.fetch.bind(window);
     window.fetch = (input, init = {}) => {
       const url = typeof input === "string" ? input : input.url;
+      const fault = sessionStorage.getItem("sap-audit-fail-read");
+      if (fault && url === api + fault && (init.method || "GET") === "GET") {
+        sessionStorage.removeItem("sap-audit-fail-read");
+        return Promise.reject(new TypeError("Failed to fetch"));
+      }
       if (url.startsWith(api + "/admin/maps/")) {
         const headers = new Headers(init.headers || {});
         headers.set("X-SAP-Test", "true");
@@ -58,22 +60,6 @@ async function pageFor(app) {
   if (staged) await p.setBypassServiceWorker(true);
   await p.setRequestInterception(true);
   p.on("request", async (r) => {
-    if (
-      failNextSessionRead &&
-      r.url() === api + "/admin/session" &&
-      r.method() === "GET"
-    ) {
-      failNextSessionRead = false;
-      return r.abort("connectionfailed");
-    }
-    if (
-      failNextDatasetRead &&
-      r.url() === api + "/admin/maps/dataset" &&
-      r.method() === "GET"
-    ) {
-      failNextDatasetRead = false;
-      return r.abort("connectionfailed");
-    }
     const u = new URL(r.url());
     if (
       staged &&
@@ -386,7 +372,22 @@ try {
           ) || 0;
         const expectedBottom =
           innerWidth <= 760 ? sheet.top : innerHeight - safeBottom;
-        return Math.abs(canvas.bottom - expectedBottom) < 2 && canvas.top === 0;
+        const safeLeft =
+          parseFloat(
+            getComputedStyle(document.body).getPropertyValue("--map-safe-left"),
+          ) || 0;
+        const safeRight =
+          parseFloat(
+            getComputedStyle(document.body).getPropertyValue(
+              "--map-safe-right",
+            ),
+          ) || 0;
+        return (
+          Math.abs(canvas.bottom - expectedBottom) < 2 &&
+          canvas.top === 0 &&
+          (innerWidth <= 760 ||
+            (sheet.left >= safeLeft && sheet.right <= innerWidth - safeRight))
+        );
       }),
     );
     check(
@@ -456,7 +457,9 @@ try {
     await p.$eval("dialog [data-save]", (e) => e.disabled),
   );
   await click(p, "dialog [data-close]");
-  failNextSessionRead = true;
+  await p.evaluate(() =>
+    sessionStorage.setItem("sap-audit-fail-read", "/admin/session"),
+  );
   await p.reload({ waitUntil: "domcontentloaded" });
   await p.waitForSelector("[data-retry-offline]");
   check(
@@ -475,7 +478,9 @@ try {
     "Session retry restores the private map without re-entering credentials",
     true,
   );
-  failNextDatasetRead = true;
+  await p.evaluate(() =>
+    sessionStorage.setItem("sap-audit-fail-read", "/admin/maps/dataset"),
+  );
   await p.reload({ waitUntil: "networkidle2" });
   await p.waitForSelector("[data-retry-sites]");
   check(
