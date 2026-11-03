@@ -1173,12 +1173,13 @@ body.maps-app .map-filters {
   }
   body.maps-app .map-status {
     left: 12px;
-    right: 12px;
+    right: 88px;
     max-width: none;
-    bottom: 145px;
+    bottom: 200px;
     max-height: 30px;
     overflow: hidden;
     opacity: 0.9;
+    pointer-events: none;
   }
   body.maps-app .admin-dialog {
     width: 100%;

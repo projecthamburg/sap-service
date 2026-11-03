@@ -209,6 +209,9 @@ for (const device of matrix) {
     entry.release = await exec(
       "return document.querySelector('meta[name=\"sap-build\"]').content"
     );
+    entry.viewport = await exec(
+      'return {width:innerWidth,height:innerHeight,orientation:innerWidth>innerHeight?"landscape":"portrait"}'
+    );
     check("Expected deployed release", entry.release === expectedRelease);
     if (entry.release !== expectedRelease)
       throw Error("Deployed build does not match this audit.");
@@ -216,6 +219,12 @@ for (const device of matrix) {
       "Invited-account sign-in gate",
       await exec(
         'return !document.querySelector(".lead-row,.inbox-record") && !!document.querySelector(".admin-login [name=password]")'
+      )
+    );
+    check(
+      "Sign-in card is centered and clear of the header",
+      await exec(
+        'const r=document.querySelector(".admin-login").getBoundingClientRect(),h=document.querySelector(".site-header").getBoundingClientRect();const fits=r.height+48<innerHeight-h.bottom;return Math.abs((r.left+r.right)/2-innerWidth/2)<2 && r.top>=h.bottom && (!fits || Math.abs((r.top+r.bottom)/2-(h.bottom+innerHeight)/2)<4)'
       )
     );
     await exec(
@@ -327,6 +336,13 @@ for (const device of matrix) {
         'return document.querySelector("[data-radar-status]").textContent.includes("GPS off")'
       )
     );
+    if (await exec("return innerWidth<=760"))
+      check(
+        "Map status stays clear of nearby controls",
+        await exec(
+          'const s=document.querySelector(".map-status").getBoundingClientRect(),r=document.querySelector(".map-app-nearby").getBoundingClientRect();return s.bottom<=r.top||s.top>=r.bottom||s.right<=r.left||s.left>=r.right'
+        )
+      );
     for (const theme of ["light", "dark"]) {
       await exec("document.documentElement.dataset.theme=arguments[0]", [
         theme,
@@ -373,14 +389,18 @@ for (const device of matrix) {
       )
     );
     await click("[data-layers]");
-    await click("[data-install-app]");
-    check(
-      "Install action offers platform guidance",
-      await exec(
-        'return !!document.querySelector("dialog[open]") && document.querySelector("dialog").textContent.includes("Home Screen")'
-      )
-    );
-    await click("dialog button");
+    if (await exec("return !!window.sapMapsInstallPrompt")) {
+      check("Chrome makes the native install prompt available", true);
+    } else {
+      await click("[data-install-app]");
+      check(
+        "Install action offers platform guidance",
+        await exec(
+          'return !!document.querySelector("dialog[open]") && document.querySelector("dialog").textContent.includes("Home Screen")'
+        )
+      );
+      await click("dialog button");
+    }
     await click("[data-logout]");
     await wait('return !!document.querySelector(".admin-login")');
     check(
