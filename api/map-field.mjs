@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 export const VISIT_STATES = ["open", "visited", "return"];
 export function validateFieldSite(body) {
+  if(!body||typeof body!=="object"||Array.isArray(body))return ["Provide a site name and a shared location."];
   const errors = [];
   if (
     typeof body.name !== "string" ||

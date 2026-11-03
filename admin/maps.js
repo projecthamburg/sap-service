@@ -205,7 +205,9 @@ export function mountMaps(root, { request, language }) {
     paint();
     radar();
   }
-  function updateDistanceLabels(){root.querySelectorAll("[data-lead]").forEach(button=>{const record=records.find(r=>r.lead_id===button.dataset.lead),label=button.querySelector("[data-distance]");if(label&&record&&coordinates(record)&&position)label.textContent=` · ${(distance(position,coordinates(record))/1609.344).toFixed(1)} mi`;});}
+  function updateDistanceLabels(){
+    if(position&&selected){const site=records.find(r=>r.lead_id===selected);if(site&&coordinates(site))root.querySelectorAll("dialog [data-route]").forEach(link=>link.href=drivingURL(coordinates(site),position));}
+root.querySelectorAll("[data-lead]").forEach(button=>{const record=records.find(r=>r.lead_id===button.dataset.lead),label=button.querySelector("[data-distance]");if(label&&record&&coordinates(record)&&position)label.textContent=` · ${(distance(position,coordinates(record))/1609.344).toFixed(1)} mi`;});}
   function clearMarkers() {
     markers.forEach((m) => (engine === "google" ? m.setMap(null) : m.remove()));
     markers = [];
