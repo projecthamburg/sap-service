@@ -31,11 +31,27 @@ export async function mountAdmin(root, language, config, all) {
   prepareMapsApp();
   root.innerHTML = `<section class="admin-shell"><p class="eyebrow">SAP SERVICE INC. / ${w("OPERATIONS", "OPÉRATIONS")}</p><h1>${w("Your workspace.", "Votre espace de travail.")}</h1><div id="admin-body" role="region" aria-label="Admin"><p role="status">${w("Connecting securely…", "Connexion sécurisée…")}</p></div></section>`;
   const body = root.querySelector("#admin-body");
+  const connectionError = (e) =>
+    !navigator.onLine ||
+    ["TypeError", "TimeoutError", "NetworkError"].includes(e.name) ||
+    e.status >= 500 ||
+    /failed to fetch|network request failed|network error|load failed/i.test(
+      e.message || ""
+    );
+  function reconnect(retry) {
+    if (disposed) return;
+    body.innerHTML = `<div class="admin-login"><h1>${w("Connect to continue", "Connexion requise")}</h1><p>${w("Sign-in and private site data require an internet connection. Check your connection, then retry.", "La connexion et les sites privés nécessitent Internet. Vérifiez votre connexion, puis réessayez.")}</p><button class="button primary" data-retry-offline>${w("Retry", "Réessayer")}</button></div>`;
+    body.querySelector("[data-retry-offline]").onclick = (e) => {
+      e.currentTarget.disabled = true;
+      retry();
+    };
+  }
   async function request(path, options = {}) {
     let bearer;
     try {
       bearer = await auth.token();
     } catch (e) {
+      if (connectionError(e)) throw e;
       disposeTool();
       disposeTool = () => {};
       auth.signOut();
@@ -100,7 +116,12 @@ export async function mountAdmin(root, language, config, all) {
     try {
       await fn();
     } catch (e) {
-      status.textContent = e.message || "Sign-in failed.";
+      status.textContent = connectionError(e)
+        ? w(
+            "Connection unavailable. Check your connection and try again.",
+            "Connexion indisponible. Vérifiez votre connexion et réessayez."
+          )
+        : e.message || "Sign-in failed.";
     } finally {
       b.disabled = false;
     }
@@ -209,7 +230,8 @@ export async function mountAdmin(root, language, config, all) {
       );
       await show(location.hash.endsWith("/inbox") ? "inbox" : "maps");
     } catch (e) {
-      if (!disposed) login(e.message);
+      if (!disposed)
+        connectionError(e) ? reconnect(workspace) : login(e.message);
     }
   }
   try {
@@ -217,16 +239,12 @@ export async function mountAdmin(root, language, config, all) {
     try {
       await auth.token();
       await workspace();
-    } catch {
-      login();
+    } catch (e) {
+      connectionError(e) ? reconnect(workspace) : login();
     }
   } catch (e) {
-    if (!navigator.onLine || e.name === "TypeError")
-      body.innerHTML = `<div class="admin-login"><h1>${w("Connect to continue", "Connexion requise")}</h1><p>${w("Sign-in and private site data require an internet connection. Reconnect, then refresh the app.", "La connexion et les sites privés nécessitent Internet. Reconnectez-vous, puis actualisez l’application.")}</p><button class="button primary" data-retry-offline>${w("Retry", "Réessayer")}</button></div>`;
+    if (connectionError(e)) reconnect(() => location.reload());
     else body.textContent = e.message;
-    body
-      .querySelector("[data-retry-offline]")
-      ?.addEventListener("click", () => location.reload());
   }
   return () => {
     if (disposed) return;

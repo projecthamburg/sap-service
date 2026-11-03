@@ -22,6 +22,7 @@ const checks = [],
   failedRequests = [];
 let bearer,
   siteId,
+  failNextSessionRead = false,
   failNextDatasetRead = false;
 const check = (name, passed) => {
   checks.push({ name, passed: !!passed });
@@ -57,6 +58,14 @@ async function pageFor(app) {
   if (staged) await p.setBypassServiceWorker(true);
   await p.setRequestInterception(true);
   p.on("request", async (r) => {
+    if (
+      failNextSessionRead &&
+      r.url() === api + "/admin/session" &&
+      r.method() === "GET"
+    ) {
+      failNextSessionRead = false;
+      return r.abort("connectionfailed");
+    }
     if (
       failNextDatasetRead &&
       r.url() === api + "/admin/maps/dataset" &&
@@ -447,6 +456,25 @@ try {
     await p.$eval("dialog [data-save]", (e) => e.disabled),
   );
   await click(p, "dialog [data-close]");
+  failNextSessionRead = true;
+  await p.reload({ waitUntil: "domcontentloaded" });
+  await p.waitForSelector("[data-retry-offline]");
+  check(
+    "Temporary session connection failure offers retry without requesting a password",
+    await p.evaluate(
+      () =>
+        !document.querySelector("[name=password]") &&
+        document
+          .querySelector(".admin-login")
+          .textContent.includes("Check your connection"),
+    ),
+  );
+  await click(p, "[data-retry-offline]");
+  await p.waitForSelector(".lead-row");
+  check(
+    "Session retry restores the private map without re-entering credentials",
+    true,
+  );
   failNextDatasetRead = true;
   await p.reload({ waitUntil: "networkidle2" });
   await p.waitForSelector("[data-retry-sites]");
