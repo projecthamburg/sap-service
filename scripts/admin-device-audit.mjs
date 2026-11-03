@@ -511,7 +511,7 @@ for (const device of matrix) {
       check(
         "Install action offers platform guidance",
         await exec(
-          'return !!document.querySelector("dialog[open]") && document.querySelector("dialog").textContent.includes("Home Screen")'
+          'const d=document.querySelector("dialog[open]"),v=getComputedStyle(document.body),l=parseFloat(v.getPropertyValue("--map-safe-left"))||0,r=parseFloat(v.getPropertyValue("--map-safe-right"))||0,b=d?.getBoundingClientRect();return !!d&&d.textContent.includes("Home Screen")&&b.left>=l&&b.right<=innerWidth-r'
         )
       );
       await click("dialog button");

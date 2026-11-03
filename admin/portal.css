@@ -1870,6 +1870,13 @@ body.maps-app .site-dialog .dialog-content {
   }
 }
 @media (max-height: 560px) and (min-width: 761px) {
+  body.maps-app .admin-dialog:not(.site-dialog) {
+    --dialog-safe-inline: max(var(--map-safe-left), var(--map-safe-right));
+    width: min(
+      880px,
+      calc(100% - 32px - var(--dialog-safe-inline) - var(--dialog-safe-inline))
+    );
+  }
   body.maps-app .lead-sidebar,
   body.maps-app .map-layout[data-layout="map"] .lead-sidebar {
     left: calc(16px + var(--map-safe-left));
