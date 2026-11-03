@@ -53,6 +53,7 @@ async function pageFor(app) {
     };
   }, api);
   if (staged) {
+    await p.setBypassServiceWorker(true);
     await p.setRequestInterception(true);
     p.on("request", async (r) => {
       const u = new URL(r.url());
@@ -205,10 +206,7 @@ try {
       !document.querySelector("dialog [data-new-site]"),
     { timeout: 30000 }
   );
-  siteId = await p.$eval(
-    "dialog .eyebrow",
-    (e) => e.textContent.match(/SAP-F-[A-F0-9]+/)?.[0]
-  );
+  siteId = await p.$eval("dialog", (e) => e.dataset.recordId);
   check("GPS site is saved privately and opens its dossier", !!siteId);
   for (const state of ["visited", "return", "open"]) {
     await click(p, `dialog [data-set-visit=${state}]`);

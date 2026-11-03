@@ -1,4 +1,11 @@
 import { setupAppLayout } from "./app-layout.js";
+import {
+  siteTitle,
+  readable,
+  companyLabel,
+  stageLabel,
+  priorityLabel,
+} from "./presentation.js";
 import { isMapsApp } from "../src/pwa.js";
 import { fieldLead, drivingURL, sitePinSVG, VISIT_LABELS } from "./field.js";
 import { reviewedLocation } from "./location.js";
@@ -56,7 +63,8 @@ export function mountMaps(root, { request, language }) {
     previousPosition = null,
     lastAlertAt = 0,
     activeAlertId = null,
-    alertTimer;
+    alertTimer,
+    dialogSequence = 0;
   const alerted = new Set(),
     reviews = new Map();
   let prefs;
@@ -65,7 +73,7 @@ export function mountMaps(root, { request, language }) {
   } catch {
     prefs = {};
   }
-  let analyst = prefs.analyst !== false,
+  let analyst = prefs.recordView === "research",
     visibleTiers = [...TIERS],
     radius = [804.672, 1609.344, 3218.688, 8046.72, 16093.44].includes(
       Number(prefs.radius)
@@ -178,12 +186,12 @@ export function mountMaps(root, { request, language }) {
           ).length)
       );
     q(".lead-results").textContent =
-      `${rows.length} / ${records.length} ${w("sites", "sites")} · ${rows.filter((r) => r.isFieldSite).length} ${w("field observations", "observations terrain")} · ${rows.filter((r) => !point(r)).length} ${w("without coordinates", "sans coordonnées")}`;
+      `${rows.length} ${w("sites", "sites")}${rows.length !== records.length ? ` / ${records.length}` : ""}${rows.some((r) => !point(r)) ? ` · ${rows.filter((r) => !point(r)).length} ${w("location needed", "à localiser")}` : ""}`;
     q(".lead-list").innerHTML =
       rows
         .map(
           (r) =>
-            `<button class="lead-row ${selected === r.lead_id ? "selected" : ""}" data-lead="${esc(r.lead_id)}" style="--tier:${COLORS[r.priority]}"><span class="lead-row-meta">${esc(r.lead_id)} · ${esc(r.priority)} <strong>${r.isFieldSite ? w("Field site", "Site terrain") : r.opportunity_score + "/100"}</strong></span><span class="lead-row-title">${esc(r.project_name)}</span><span>${esc(contractorName(r.general_contractor))} · ${esc(r.city)}</span><small>${esc(r.project_stage)} · ${w(...VISIT_LABELS[visitState(r.lead_id)])}<span data-distance>${position && coordinates(r) ? ` · ${(distance(position, coordinates(r)) / 1609.344).toFixed(1)} mi` : ""}</span></small></button>`
+            `<button class="lead-row ${selected === r.lead_id ? "selected" : ""}" data-lead="${esc(r.lead_id)}" style="--tier:${COLORS[r.priority]}"><span class="lead-row-meta">${esc(priorityLabel(r.priority, w))}<strong>${w(...VISIT_LABELS[visitState(r.lead_id)])}</strong></span><span class="lead-row-title">${esc(siteTitle(r.project_name))}</span><span>${esc(companyLabel(r, w))} · ${esc(readable(r.city))}</span><small>${esc(stageLabel(r.project_stage, w))}<span data-distance>${position && coordinates(r) ? ` · ${(distance(position, coordinates(r)) / 1609.344).toFixed(1)} mi` : ""}</span></small></button>`
         )
         .join("") ||
       `<p class="map-empty">${w("No matching leads. Change your filters.", "Aucune piste. Modifiez vos filtres.")}</p>`;
@@ -253,7 +261,7 @@ export function mountMaps(root, { request, language }) {
         m = new window.google.maps.Marker({
           position: p,
           map,
-          title: r.project_name,
+          title: siteTitle(r.project_name),
           opacity: active ? 1 : 0.25,
           zIndex: selected === r.lead_id ? 99 : active ? 10 : 1,
           icon: {
@@ -275,7 +283,7 @@ export function mountMaps(root, { request, language }) {
         m.addListener("click", () => openOverlap(r, p));
       } else {
         m = L.marker([p.lat, p.lng], {
-          title: r.project_name,
+          title: siteTitle(r.project_name),
           opacity: active ? 1 : 0.25,
           icon: L.divIcon({
             className: "construction-pin",
@@ -446,7 +454,7 @@ export function mountMaps(root, { request, language }) {
     if (same.length < 2) return openLead(r.lead_id);
     dialog(
       w("Projects at this location", "Projets à cet endroit"),
-      `<p>${w("These records share approximate coordinates. Select a dossier.", "Ces dossiers partagent des coordonnées approximatives.")}</p>${same.map((v) => `<button class="button secondary" data-overlap="${esc(v.lead_id)}">${esc(v.project_name)}</button>`).join("")}`,
+      `<p>${w("Several sites are marked here. Choose a site.", "Plusieurs sites sont indiqués ici. Choisissez un site.")}</p>${same.map((v) => `<button class="button secondary" data-overlap="${esc(v.lead_id)}">${esc(siteTitle(v.project_name))}</button>`).join("")}`,
       (d) =>
         d.querySelectorAll("[data-overlap]").forEach(
           (b) =>
@@ -541,9 +549,7 @@ export function mountMaps(root, { request, language }) {
         else fit();
       }
       canvas.dataset.scheme = document.documentElement.dataset.theme;
-      message(
-        `${w("Private research loaded", "Recherches privées chargées")} · ${records.length} ${w("records", "dossiers")}. ${w("Review citations and conflicts before outreach.", "Consultez les sources et conflits avant toute démarche.")}`
-      );
+      message(`${records.length} ${w("sites ready", "sites prêts")}.`);
     } catch (e) {
       if (!disposed && g === mapGeneration) {
         canvas.innerHTML = `<div class="map-unavailable"><h3>${w("Map unavailable", "Carte indisponible")}</h3><p>${esc(e.message)}</p><button class="button secondary" data-fallback>${w("Open fallback map", "Ouvrir la carte de secours")}</button></div>`;
@@ -557,7 +563,9 @@ export function mountMaps(root, { request, language }) {
     const previousFocus = document.activeElement;
     const d = document.createElement("dialog");
     d.className = "admin-dialog";
-    d.innerHTML = `<header><h3>${esc(title)}</h3><button class="icon-button" data-close aria-label="${w("Close", "Fermer")}">×</button></header><div class="dialog-content">${html}</div>`;
+    const headingId = "map-dialog-" + ++dialogSequence;
+    d.setAttribute("aria-labelledby", headingId);
+    d.innerHTML = `<header><h3 id="${headingId}">${esc(title)}</h3><button class="icon-button" data-close aria-label="${w("Close", "Fermer")}">×</button></header><div class="dialog-content">${html}</div>`;
     root.append(d);
     d.querySelector("[data-close]").onclick = () => d.close();
     d.addEventListener("close", () => {
@@ -580,7 +588,7 @@ export function mountMaps(root, { request, language }) {
       engine === "google" ? map.panTo(p) : map.panTo([p.lat, p.lng]);
     }
     dialog(
-      r.project_name,
+      siteTitle(r.project_name),
       dossierHTML(r, {
         w,
         p,
@@ -591,11 +599,48 @@ export function mountMaps(root, { request, language }) {
         workflow: activity[r.lead_id],
       }),
       (d) => {
+        d.classList.add("site-dialog");
+        d.dataset.recordId = id;
+        const header = d.querySelector("header");
+        d.addEventListener(
+          "close",
+          () => {
+            const row = q(`[data-lead="${CSS.escape(id)}"]`);
+            (row?.offsetParent ? row : q("[data-my-location]"))?.focus({
+              preventScroll: true,
+            });
+          },
+          { once: true }
+        );
+        header.append(
+          d.querySelector("[data-card-address]"),
+          d.querySelector("[data-card-actions]")
+        );
+        const cardHeaderObserver = new ResizeObserver(() =>
+          d.style.setProperty(
+            "--site-header-height",
+            header.getBoundingClientRect().height + "px"
+          )
+        );
+        cardHeaderObserver.observe(header);
+        d.addEventListener("close", () => cardHeaderObserver.disconnect(), {
+          once: true,
+        });
+        d.querySelector("[data-review-record]")?.addEventListener(
+          "click",
+          () => {
+            const record = d.querySelector("[data-full-record]");
+            record.open = true;
+            record.scrollIntoView({ block: "start", behavior: "instant" });
+          }
+        );
         d.querySelectorAll("[data-set-visit]").forEach(
           (b) =>
             (b.onclick = async () => {
               const status = d.querySelector("[data-work-status]");
-              b.disabled = true;
+              d.querySelectorAll("[data-set-visit]").forEach(
+                (button) => (button.disabled = true)
+              );
               try {
                 const result = await request("/admin/maps/site-status", {
                   method: "POST",
@@ -612,11 +657,13 @@ export function mountMaps(root, { request, language }) {
                 refresh();
                 d.close();
                 message(
-                  `${r.project_name} · ${w(...VISIT_LABELS[result.activity.status])}`
+                  `${siteTitle(r.project_name)} · ${w(...VISIT_LABELS[result.activity.status])}`
                 );
               } catch (e) {
                 status.textContent = e.message;
-                b.disabled = false;
+                d.querySelectorAll("[data-set-visit]").forEach(
+                  (button) => (button.disabled = false)
+                );
               }
             })
         );
@@ -628,7 +675,7 @@ export function mountMaps(root, { request, language }) {
           refresh();
           d.close();
         });
-        d.querySelector("[data-group]").onclick = () => {
+        d.querySelector("[data-group]")?.addEventListener("click", () => {
           highlight =
             highlight === contractorKey(r.general_contractor)
               ? ""
@@ -637,10 +684,10 @@ export function mountMaps(root, { request, language }) {
           d.close();
           message(
             highlight
-              ? `${w("Highlighting", "Repérage")} ${highlight}`
-              : w("Contractor highlight cleared.", "Repérage désactivé.")
+              ? `${w("Showing", "Affichage")} ${highlight}`
+              : w("Company filter cleared.", "Filtre d’entreprise effacé.")
           );
-        };
+        });
         d.querySelector("[data-locate]").onclick = async (e) => {
           const b = e.currentTarget;
           b.disabled = true;
@@ -757,7 +804,7 @@ export function mountMaps(root, { request, language }) {
       alertTimer = setTimeout(hideAlert, 12000);
       const alert = q(".radar-alert");
       alert.hidden = false;
-      alert.innerHTML = `<strong>${w("Nearby research lead", "Piste à proximité")}</strong><span>${esc(next.project_name)} · ${(distance(origin, coordinates(next)) / 1609.344).toFixed(1)} mi</span><button class="button secondary" data-open>${w("Review dossier", "Voir le dossier")}</button><a class="button secondary" href="${drive(next)}" target="_blank" rel="noopener noreferrer">${w("Drive here", "Y aller en voiture")}</a><button class="text-link" data-dismiss>${w("Dismiss", "Fermer")}</button>`;
+      alert.innerHTML = `<strong>${w("Nearby site", "Site à proximité")}</strong><span>${esc(siteTitle(next.project_name))} · ${(distance(origin, coordinates(next)) / 1609.344).toFixed(1)} mi</span><button class="button secondary" data-open>${w("View site", "Voir le site")}</button><a class="button secondary" href="${drive(next)}" target="_blank" rel="noopener noreferrer">${w("Drive here", "Y aller en voiture")}</a><button class="text-link" data-dismiss>${w("Dismiss", "Fermer")}</button>`;
       alert.querySelector("[data-open]").onclick = () => openLead(next.lead_id);
       alert.querySelector("[data-dismiss]").onclick = () => {
         hideAlert();
@@ -765,7 +812,7 @@ export function mountMaps(root, { request, language }) {
       if (notificationsOn && window.Notification?.permission === "granted") {
         try {
           const options = {
-            body: `${next.project_name} · ${(distance(origin, coordinates(next)) / 1609.344).toFixed(1)} mi`,
+            body: `${siteTitle(next.project_name)} · ${(distance(origin, coordinates(next)) / 1609.344).toFixed(1)} mi`,
             tag: "sap-site-" + next.lead_id,
             icon: "./brand/map-app-192.png",
           };
@@ -984,7 +1031,13 @@ export function mountMaps(root, { request, language }) {
     try {
       localStorage.setItem(
         "sap-map-preferences",
-        JSON.stringify({ ...prefs, analyst, radius, markerStyle })
+        JSON.stringify({
+          ...prefs,
+          analyst,
+          recordView: analyst ? "research" : "field",
+          radius,
+          markerStyle,
+        })
       );
     } catch {}
     alerted.clear();
@@ -1063,7 +1116,7 @@ export function mountMaps(root, { request, language }) {
   q("[data-settings]").onclick = () =>
     dialog(
       w("View options", "Options d’affichage"),
-      `<label class="check-line"><input type="checkbox" data-analyst ${analyst ? "checked" : ""}> ${w("Analyst view: expand evidence and conflicts", "Vue analyste : développer les preuves et conflits")}</label><p>${w("Turning this off folds the evidence panel; it never removes sources. Preferences are saved only when you apply. GPS and leads are not saved in browser storage.", "Cette option replie les preuves sans les supprimer. Seul « Appliquer » enregistre les préférences. Le GPS et les pistes ne sont pas conservés dans le navigateur.")}</p><label class="field"><span>${w("Construction marker", "Repère de chantier")}</span><select data-marker-style><option value="building">${w("Building pin", "Bâtiment")}</option><option value="hardhat">${w("Hard-hat pin", "Casque de chantier")}</option><option value="crane">${w("Crane pin", "Grue")}</option></select></label><label class="check-line"><input type="checkbox" data-keep-awake ${prefs.keepAwake ? "checked" : ""} ${!navigator.wakeLock ? "disabled" : ""}> ${w("Keep screen awake while nearby alerts are on", "Garder l’écran allumé pendant les alertes de proximité")}</label><button class="button secondary" type="button" data-enable-device-alerts>${w("Enable device notifications", "Activer les notifications système")}</button><button class="button secondary" type="button" data-open-import>${w("Import or back up site data", "Importer ou sauvegarder les sites")}</button><button class="button primary" data-apply>${w("Apply & close", "Appliquer et fermer")}</button>`,
+      `<label class="check-line"><input type="checkbox" data-analyst ${analyst ? "checked" : ""}> ${w("Show full project records", "Afficher les dossiers complets")}</label><p>${w("Keep full records folded for everyday visits. Display preferences stay on this device.", "Gardez les dossiers repliés pour les visites courantes. Les préférences d’affichage restent sur cet appareil.")}</p><label class="field"><span>${w("Construction marker", "Repère de chantier")}</span><select data-marker-style><option value="building">${w("Building pin", "Bâtiment")}</option><option value="hardhat">${w("Hard-hat pin", "Casque de chantier")}</option><option value="crane">${w("Crane pin", "Grue")}</option></select></label><label class="check-line"><input type="checkbox" data-keep-awake ${prefs.keepAwake ? "checked" : ""} ${!navigator.wakeLock ? "disabled" : ""}> ${w("Keep screen awake while nearby alerts are on", "Garder l’écran allumé pendant les alertes de proximité")}</label><button class="button secondary" type="button" data-enable-device-alerts>${w("Enable device notifications", "Activer les notifications système")}</button><button class="button secondary" type="button" data-open-import>${w("Import or back up site data", "Importer ou sauvegarder les sites")}</button><button class="button primary" data-apply>${w("Apply & close", "Appliquer et fermer")}</button>`,
       (d) => {
         d.querySelector("[data-marker-style]").value = markerStyle;
         d.querySelector("[data-enable-device-alerts]").onclick = () =>
@@ -1082,6 +1135,7 @@ export function mountMaps(root, { request, language }) {
               "sap-map-preferences",
               JSON.stringify({
                 analyst,
+                recordView: analyst ? "research" : "field",
                 radius,
                 markerStyle,
                 keepAwake: prefs.keepAwake,

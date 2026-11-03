@@ -26,6 +26,7 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage(),
   checks = [],
   errors = [];
+if (staged) await page.setBypassServiceWorker(true);
 let research, bearer;
 const check = (name, passed) => {
   checks.push({ name, passed: !!passed });
@@ -34,7 +35,8 @@ const check = (name, passed) => {
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("request", (r) => {
-  if (r.url().includes("/admin/session") && r.headers().authorization) bearer = r.headers().authorization;
+  if (r.url().includes("/admin/session") && r.headers().authorization)
+    bearer = r.headers().authorization;
 });
 page.on("response", async (r) => {
   if (
@@ -260,11 +262,17 @@ try {
   await click(".lead-row");
   await page.waitForSelector("dialog[open]");
   check(
+    "Field card opens with its full record folded",
+    await page.$eval("dialog [data-full-record]", (e) => !e.open)
+  );
+  await click("dialog [data-full-record] > summary");
+  await click("dialog [data-full-record] details > summary");
+  check(
     "Dossier retains citations and conflicts",
     await page.$eval(
       "dialog",
       (e) =>
-        e.innerText.includes("Sources & conflicts") &&
+        e.innerText.includes("Sources & review notes") &&
         e.querySelectorAll("details li").length > 0
     )
   );

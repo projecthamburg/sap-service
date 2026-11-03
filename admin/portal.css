@@ -1414,3 +1414,248 @@ body.maps-app .admin-shell:has(> #admin-body > .admin-login) {
     left: 12px;
   }
 }
+
+/* Field cards put directions, contacts and visit actions before the full record. */
+.site-dialog {
+  width: min(640px, calc(100% - 24px));
+}
+.site-dialog > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 10px 12px;
+  padding: 16px 18px;
+}
+.site-dialog > header h3 {
+  font-size: 1.12rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.site-dialog > header [data-close] {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+.site-dialog .site-card-address {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.site-dialog .site-card-quick-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+.site-card-quick-actions .button {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  justify-content: center;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+}
+.site-dialog .dialog-content {
+  padding: 16px 18px 20px;
+}
+.site-dialog {
+  scroll-padding-top: var(--site-header-height, 190px);
+}
+.site-card .field-workflow {
+  padding: 0;
+  margin: 0 0 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.visit-state {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+}
+.visit-state > span {
+  color: var(--muted);
+}
+.visit-state strong {
+  border-radius: 20px;
+  background: var(--wash);
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+.visit-actions {
+  display: flex;
+  gap: 8px;
+}
+.visit-actions .button {
+  min-height: 44px;
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+}
+.site-card details {
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+}
+.site-card summary {
+  font-size: 0.83rem;
+  line-height: 1.4;
+}
+.site-card .visit-notes {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 12px;
+}
+.visit-notes > summary {
+  color: var(--muted);
+  font-weight: 500;
+}
+.site-card .visit-notes .field {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  font-size: 0.82rem;
+}
+.visit-note-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.8rem;
+  margin-top: 6px;
+  color: var(--ink);
+}
+.visit-notes[open] .visit-note-preview {
+  display: none;
+}
+.site-card [data-work-status]:empty {
+  display: none;
+}
+.site-quick-facts {
+  margin: 0;
+  display: grid;
+  gap: 0;
+}
+.site-quick-facts > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--admin-line);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.site-quick-facts dt {
+  color: var(--muted);
+}
+.site-quick-facts dd {
+  margin: 0;
+  font-weight: 550;
+}
+.site-company {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.site-next-step summary > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+.site-next-step[open] summary > span {
+  display: none;
+}
+.site-next-step > p {
+  font-size: 0.83rem;
+  line-height: 1.5;
+  margin: 10px 0;
+}
+.site-review-link {
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--muted);
+  font-size: 0.78rem;
+  padding: 10px 0 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.site-record > summary {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.site-record .research-meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 16px;
+}
+.site-card .dossier-field {
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+}
+.lead-row-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 760px) {
+  .site-card .dossier-field {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+}
+@media (max-height: 560px) {
+  .site-dialog > header {
+    padding: 10px 14px;
+    gap: 6px 10px;
+  }
+  .site-dialog > header h3 {
+    font-size: 1rem;
+    -webkit-line-clamp: 2;
+  }
+  .site-dialog .site-card-address {
+    -webkit-line-clamp: 1;
+  }
+}
+.site-card-address small {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.site-dialog .site-card-address {
+  display: block;
+  overflow: visible;
+}
+.site-card-address > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-height: 560px) {
+  .site-card-address > span {
+    -webkit-line-clamp: 1;
+  }
+}
