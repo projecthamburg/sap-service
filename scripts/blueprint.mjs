@@ -30,6 +30,7 @@ const selected = [...new Set(names)]
         "config/operations.json",
         "config/scheduler-template.json",
         "public/site-config.json",
+        "public/sw.js",
       ].includes(name)
   )
   .sort();

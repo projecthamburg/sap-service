@@ -23,6 +23,12 @@ const site =
   process.env.SAP_ADMIN_AUDIT_URL ||
   "https://projecthamburg.github.io/sap-service/";
 const output = resolve(".local/admin-map/devices");
+const expectedRelease =
+  process.env.SAP_EXPECT_BUILD ||
+  (await readFile("dist/index.html", "utf8")).match(
+    /name="sap-build" content="([^"]+)"/
+  )?.[1];
+if (!expectedRelease) throw Error("Build the release before its device audit.");
 await mkdir(output, { recursive: true, mode: 0o700 });
 const matrix = [
   {
@@ -102,6 +108,7 @@ const headers = {
   Authorization:
     "Basic " + Buffer.from(username + ":" + key).toString("base64"),
   "Content-Type": "application/json",
+  Connection: "close",
 };
 const clean = (s) =>
   String(s)
@@ -109,6 +116,7 @@ const clean = (s) =>
     .replaceAll(username, "[account]")
     .replaceAll(account.password, "[redacted]");
 async function wd(path, body, method = body ? "POST" : "GET") {
+  await new Promise((r) => setTimeout(r, 200));
   const r = await fetch("https://hub-cloud.browserstack.com/wd/hub" + path, {
     method,
     headers,
@@ -147,7 +155,7 @@ for (const device of matrix) {
           "bstack:options": {
             ...device.options,
             projectName: "SAP Service",
-            buildName: "SAP authenticated admin Maps",
+            buildName: "SAP Maps field PWA " + expectedRelease,
             sessionName: device.name,
             debug: false,
             video: false,
@@ -198,6 +206,12 @@ for (const device of matrix) {
     });
     await wd(`/session/${id}/url`, { url: new URL("#/en/admin", site).href });
     await wait('return !!document.querySelector(".admin-login")');
+    entry.release = await exec(
+      "return document.querySelector('meta[name=\"sap-build\"]').content"
+    );
+    check("Expected deployed release", entry.release === expectedRelease);
+    if (entry.release !== expectedRelease)
+      throw Error("Deployed build does not match this audit.");
     check(
       "Invited-account sign-in gate",
       await exec(
@@ -290,6 +304,83 @@ for (const device of matrix) {
       "Existing private inbox uses account session",
       await exec('return !document.querySelector(".inbox-login")')
     );
+    const appURL = new URL(site);
+    appURL.searchParams.set("workspace", "maps");
+    appURL.hash = "/en/admin/maps";
+    await wd(`/session/${id}/url`, { url: appURL.href });
+    await wait('return document.querySelectorAll(".lead-row").length===67', 60);
+    check(
+      "Standalone map preserves the authenticated account",
+      await exec(
+        'return document.body.classList.contains("maps-app") && getComputedStyle(document.querySelector(".map-layout")).position==="fixed"'
+      )
+    );
+    check(
+      "Location and layers have large tap targets",
+      await exec(
+        'return ["[data-my-location]","[data-layers]"].every(s=>{const r=document.querySelector(s).getBoundingClientRect();return r.width>=44&&r.height>=44})'
+      )
+    );
+    check(
+      "Location remains permission driven",
+      await exec(
+        'return document.querySelector("[data-radar-status]").textContent.includes("GPS off")'
+      )
+    );
+    for (const theme of ["light", "dark"]) {
+      await exec("document.documentElement.dataset.theme=arguments[0]", [
+        theme,
+      ]);
+      await wait(
+        'return document.querySelector(".map-canvas").dataset.scheme==="' +
+          theme +
+          '"'
+      );
+      await pause(1300);
+      check(
+        "Standalone " + theme + " fits viewport",
+        await exec("return document.documentElement.scrollWidth<=innerWidth+1")
+      );
+      check(
+        "Standalone " + theme + " Google map renders",
+        await exec(
+          'return !!document.querySelector(".gm-style")&&!document.querySelector(".map-canvas").textContent.includes("Oops!")'
+        )
+      );
+      await capture("pwa-" + theme);
+    }
+    if (await exec("return innerWidth<=760")) {
+      await click("[data-sheet-toggle]");
+      check(
+        "Mobile site sheet expands accessibly",
+        await exec(
+          'return document.querySelector("[data-sheet-toggle]").getAttribute("aria-expanded")==="true" && getComputedStyle(document.querySelector(".lead-list")).display!=="none"'
+        )
+      );
+      await click("[data-sheet-toggle]");
+      check(
+        "Mobile sheet collapses to reveal the map",
+        await exec(
+          'return getComputedStyle(document.querySelector(".lead-list")).display==="none"'
+        )
+      );
+    }
+    await click("[data-layers]");
+    check(
+      "Satellite layer toggles",
+      await exec(
+        'return document.querySelector("[data-layers]").getAttribute("aria-pressed")==="true"'
+      )
+    );
+    await click("[data-layers]");
+    await click("[data-install-app]");
+    check(
+      "Install action offers platform guidance",
+      await exec(
+        'return !!document.querySelector("dialog[open]") && document.querySelector("dialog").textContent.includes("Home Screen")'
+      )
+    );
+    await click("dialog button");
     await click("[data-logout]");
     await wait('return !!document.querySelector(".admin-login")');
     check(

@@ -146,3 +146,26 @@ test("construction markers have distinct shapes and safe status badges", () => {
   assert(sitePinSVG({ state: "visited" }).includes("#247753"));
   assert(!sitePinSVG({ color: '" onload="alert(1)' }).includes("onload"));
 });
+
+test("concurrent retries create one field record and return the same saved site", async () => {
+  const { db, rows } = memory(),
+    service = createFieldService({
+      db,
+      table: "test",
+      researchRecordExists: async () => true,
+    }),
+    actor = { id: "audit-operator" };
+  const [a, b] = await Promise.all([
+    service.handle("/admin/maps/field-sites", "POST", input, actor, {
+      test: true,
+    }),
+    service.handle("/admin/maps/field-sites", "POST", input, actor, {
+      test: true,
+    }),
+  ]);
+  assert.equal(a.data.site.id, b.data.site.id);
+  assert.equal(
+    [...rows.values()].filter((r) => r.recordType === "maps-field-test").length,
+    1
+  );
+});

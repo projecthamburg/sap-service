@@ -1,6 +1,6 @@
-# Paused checkpoint — November 2, 2026 (Montréal)
+# Maps field/PWA release candidate — November 2, 2026 (Montréal)
 
-Paused at the owner's explicit request while more usage is arranged. Resume only when the owner requests it.
+The owner authorized resumption. The pause below is historical. The field workflow, radius-boundary and public-shell offline tests now pass; final publication/device acceptance is in progress. The current verification report will identify the accepted live release.
 
 ## Live release
 

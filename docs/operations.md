@@ -70,3 +70,8 @@ Update only the dedicated resources. Preserve the runtime role's limited permiss
 ## Plan review and handover
 
 Opt-in page review uses a separate endpoint and explicit consent, seven-day private tiles/jobs, bounded attempts and daily tile allowance. Completed results are cached, and original source bytes are hash checked before accepting a reviewed-plan quotation. See [handover](handover.md), [calculator](calculator-methodology.md), [cost scenarios](cost-estimate.md) and [audit protocol](audit-protocol.md). Optional discovery text is included in the quote/PDF/email, not local saved scopes; budget is context only.
+
+
+## Private Maps and field operations
+
+The Admin menu now uses invited Cognito accounts for Maps and Inbox. See [Admin workspace](admin-maps.md) for account invitation/revocation, standalone installation, GPS permission, field capture, visit states and isolated test cleanup. Account revocation takes effect at the API even while an old access token has time remaining. GPS processing runs locally; only explicit field-site and visit writes persist. The existing on-demand DynamoDB table and private S3 research store serve the tool. Do not treat submission TTL as fieldwork retention or automatic backup. Public service-worker caches must never contain authenticated APIs, research, uploaded files or travel history.

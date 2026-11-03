@@ -7,7 +7,8 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 export const VISIT_STATES = ["open", "visited", "return"];
 export function validateFieldSite(body) {
-  if(!body||typeof body!=="object"||Array.isArray(body))return ["Provide a site name and a shared location."];
+  if (!body || typeof body !== "object" || Array.isArray(body))
+    return ["Provide a site name and a shared location."];
   const errors = [];
   if (
     typeof body.name !== "string" ||
@@ -131,29 +132,37 @@ export function createFieldService({ db, table, researchRecordExists }) {
         receivedAt: stamp,
         ...(expiresAt ? { expiresAt } : {}),
       };
-      await db.send(
-        new TransactWriteCommand({
-          TransactItems: [
-            {
-              Put: {
-                TableName: table,
-                Item: site,
-                ConditionExpression: "attribute_not_exists(pk)",
-              },
-            },
-            {
-              Put: {
-                TableName: table,
-                Item: {
-                  ...site,
-                  pk: k.prefix + "FIELD-AUDIT#" + stamp + "#" + randomUUID(),
-                  recordType: undefined,
+      try {
+        await db.send(
+          new TransactWriteCommand({
+            TransactItems: [
+              {
+                Put: {
+                  TableName: table,
+                  Item: site,
+                  ConditionExpression: "attribute_not_exists(pk)",
                 },
               },
-            },
-          ],
-        })
-      );
+              {
+                Put: {
+                  TableName: table,
+                  Item: {
+                    ...site,
+                    pk: k.prefix + "FIELD-AUDIT#" + stamp + "#" + randomUUID(),
+                    recordType: undefined,
+                  },
+                },
+              },
+            ],
+          })
+        );
+      } catch (error) {
+        if (error.name === "TransactionCanceledException" && body.requestId) {
+          const saved = await get(k.prefix + "FIELD#" + id);
+          if (saved) return { data: { site: publicSite(saved) } };
+        }
+        throw error;
+      }
       return { status: 201, data: { site: publicSite(site) } };
     }
     if (path === "/admin/maps/site-status" && method === "POST") {

@@ -12,7 +12,7 @@ Until Mordecai authorizes a cutover, **Project Hamburg operates this proposal**.
 | Plans/résumés | Private encrypted S3; 90-day expiry | Confirm retention, storage country, deletion owner and backup policy |
 | Anonymous plan-review tiles | Private S3 and DynamoDB; 7-day expiry | Confirm processor consent, policy, AI budget and deletion process |
 | Enquiry email | Resend; verified Project Hamburg sender, info@ recipient | Verify SAP sending domain and destination before switching |
-| Operator access | Private inbox key, tab memory only | Transfer through a password manager, rotate at cutover; never put it in Git/email |
+| Operator access | Invited Cognito SAPAdmins accounts; emergency script token | Invite approved SAP operators, test access, revoke proposal-only accounts and rotate emergency credentials securely |
 | Scheduler | SAP template 6 on shared Patron Booking Pro | Confirm timezone, hours, duration, fields, operator notifications and support owner |
 | Estimate rates | `src/pricing.js`, explicitly illustrative | Frank completes `frank-rate-review.csv`; approve and version the rates |
 | Brand and visuals | Canonical supplied SAP geometry; illustrative imagery | Preserve approved mark; obtain real project photography if desired |
@@ -43,3 +43,12 @@ Update the central operations profile, infrastructure/API origins, public URLs, 
 Expiry is a retention control, not a backup. The read-only scheduler inventory found a shared t3.small with one 40 GiB gp3 disk, no disk encryption and zero self-owned snapshots returned for that volume. This does not prove whether database dumps or other backups exist. No shared host configuration was changed. A dedicated SAP deployment should define encrypted storage, scheduled database backups, retention, restore testing and incident ownership before being represented as fully managed production hosting.
 
 Decide separately whether to enable DynamoDB point-in-time recovery and S3 versioning/backup; align them with deletion commitments and costs. The current implementation does not claim that these optional backup services or a 24-hour operational response contract have been purchased. Native PDF/browser tests and optional BrowserStack regression runs form part of maintenance, not an always-on monitoring service.
+
+
+## Admin Maps handover
+
+Transfer the original research and current lossless snapshot, dataset versions/audit, explicitly saved field sites and visit activity. Use the separate fieldwork export as a migration input; automatic restore is not implemented. Reconcile record IDs and test status changes/reopening in the destination before cutover. These operational records contain intentionally saved locations and operator notes and require a separate agreed retention/deletion policy; the public submission expiry is not their backup policy.
+
+Include the Cognito pool/client/group, API issuer/client settings, dedicated Google Maps key and referrer restrictions, encrypted GitHub deployment secrets/OIDC role, service worker scope and PWA manifest/start URL. If the domain changes, update allowed origins, Maps referrers, public URLs and installed-app instructions together. Existing installed clients can retain old public shells until they reconnect; keep a transition/rollback window. Keep the old private data read-only until the verified destination and approved migration are complete. Do not transfer shared unrelated AWS, Google or scheduler tenants.
+
+The current deployments use the business AWS account in Canada Central, verified by STS and the deployed Lambda ARN. Research-account credentials are excluded. The map has no always-on tracking backend, no automatic new-lead discovery feed and no guaranteed background GPS; maintain those limits in training and proposals.

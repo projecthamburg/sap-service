@@ -16,6 +16,18 @@ export async function mountAdmin(root, language, config, all) {
     disposeTool = () => {},
     generation = 0;
   root.classList.add("admin-portal");
+  const headerParts = [
+    document.querySelector(".site-header"),
+    document.querySelector(".utility-bar"),
+  ].filter(Boolean);
+  const syncHeaderHeight = () =>
+    root.style.setProperty(
+      "--admin-header-height",
+      `${headerParts.reduce((height, element) => height + element.getBoundingClientRect().height, 0)}px`
+    );
+  const headerObserver = new ResizeObserver(syncHeaderHeight);
+  headerParts.forEach((element) => headerObserver.observe(element));
+  syncHeaderHeight();
   prepareMapsApp();
   root.innerHTML = `<section class="admin-shell"><p class="eyebrow">SAP SERVICE INC. / ${w("OPERATIONS", "OPÉRATIONS")}</p><h1>${w("Your workspace.", "Votre espace de travail.")}</h1><div id="admin-body" role="region" aria-label="Admin"><p role="status">${w("Connecting securely…", "Connexion sécurisée…")}</p></div></section>`;
   const body = root.querySelector("#admin-body");
@@ -209,13 +221,20 @@ export async function mountAdmin(root, language, config, all) {
       login();
     }
   } catch (e) {
-    body.textContent = e.message;
+    if (!navigator.onLine || e.name === "TypeError")
+      body.innerHTML = `<div class="admin-login"><h2>${w("Connect to continue", "Connexion requise")}</h2><p>${w("Sign-in and private site data require an internet connection. Reconnect, then refresh the app.", "La connexion et les sites privés nécessitent Internet. Reconnectez-vous, puis actualisez l’application.")}</p><button class="button primary" data-retry-offline>${w("Retry", "Réessayer")}</button></div>`;
+    else body.textContent = e.message;
+    body
+      .querySelector("[data-retry-offline]")
+      ?.addEventListener("click", () => location.reload());
   }
   return () => {
     if (disposed) return;
     disposed = true;
     generation++;
     disposeTool();
+    headerObserver.disconnect();
+    root.style.removeProperty("--admin-header-height");
     root.classList.remove("admin-portal");
   };
 }

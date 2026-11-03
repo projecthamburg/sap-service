@@ -41,6 +41,8 @@ for (const name of browserFiles)
 for (const name of (await readdir("admin")).sort())
   releaseHash.update(await readFile(resolve("admin", name)));
 releaseHash.update(await readFile("public/admin-auth.json"));
+releaseHash.update(await readFile("public/manifest.webmanifest"));
+releaseHash.update(await readFile("public/sw.js"));
 releaseHash.update(publicConfig);
 releaseHash.update(await readFile("index.html"));
 releaseHash.update(await readFile("package-lock.json"));

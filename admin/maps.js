@@ -54,7 +54,9 @@ export function mountMaps(root, { request, language }) {
     quick = "",
     insideOnly = false,
     previousPosition = null,
-    lastAlertAt = 0;
+    lastAlertAt = 0,
+    activeAlertId = null,
+    alertTimer;
   const alerted = new Set(),
     reviews = new Map();
   let prefs;
@@ -100,9 +102,9 @@ export function mountMaps(root, { request, language }) {
   }
   q("[data-layers]")?.addEventListener("click", () => {
     if (engine === "google" && map) {
-      map.setMapTypeId(
-        map.getMapTypeId() === "satellite" ? "roadmap" : "satellite"
-      );
+      const satellite = map.getMapTypeId() !== "satellite";
+      map.setMapTypeId(satellite ? "satellite" : "roadmap");
+      q("[data-layers]").setAttribute("aria-pressed", String(satellite));
     } else
       message(
         w(
@@ -161,6 +163,12 @@ export function mountMaps(root, { request, language }) {
     if (sheetCount)
       sheetCount.textContent = `${records.length} ${w("sites · tap to view", "sites · toucher pour voir")}`;
     const rows = filtered();
+    if (
+      activeAlertId &&
+      (!rows.some((r) => r.lead_id === activeAlertId) ||
+        visitState(activeAlertId) === "visited")
+    )
+      hideAlert();
     root
       .querySelectorAll("[data-count]")
       .forEach(
@@ -170,7 +178,7 @@ export function mountMaps(root, { request, language }) {
           ).length)
       );
     q(".lead-results").textContent =
-      `${rows.length} / ${records.length} ${w("research leads", "pistes de recherche")} · ${rows.filter((r) => !point(r)).length} ${w("without coordinates", "sans coordonnées")}`;
+      `${rows.length} / ${records.length} ${w("sites", "sites")} · ${rows.filter((r) => r.isFieldSite).length} ${w("field observations", "observations terrain")} · ${rows.filter((r) => !point(r)).length} ${w("without coordinates", "sans coordonnées")}`;
     q(".lead-list").innerHTML =
       rows
         .map(
@@ -205,9 +213,23 @@ export function mountMaps(root, { request, language }) {
     paint();
     radar();
   }
-  function updateDistanceLabels(){
-    if(position&&selected){const site=records.find(r=>r.lead_id===selected);if(site&&coordinates(site))root.querySelectorAll("dialog [data-route]").forEach(link=>link.href=drivingURL(coordinates(site),position));}
-root.querySelectorAll("[data-lead]").forEach(button=>{const record=records.find(r=>r.lead_id===button.dataset.lead),label=button.querySelector("[data-distance]");if(label&&record&&coordinates(record)&&position)label.textContent=` · ${(distance(position,coordinates(record))/1609.344).toFixed(1)} mi`;});}
+  function updateDistanceLabels() {
+    if (position && selected) {
+      const site = records.find((r) => r.lead_id === selected);
+      if (site && coordinates(site))
+        root
+          .querySelectorAll("dialog [data-route]")
+          .forEach(
+            (link) => (link.href = drivingURL(coordinates(site), position))
+          );
+    }
+    root.querySelectorAll("[data-lead]").forEach((button) => {
+      const record = records.find((r) => r.lead_id === button.dataset.lead),
+        label = button.querySelector("[data-distance]");
+      if (label && record && coordinates(record) && position)
+        label.textContent = ` · ${(distance(position, coordinates(record)) / 1609.344).toFixed(1)} mi`;
+    });
+  }
   function clearMarkers() {
     markers.forEach((m) => (engine === "google" ? m.setMap(null) : m.remove()));
     markers = [];
@@ -689,6 +711,11 @@ root.querySelectorAll("[data-lead]").forEach(button=>{const record=records.find(
       }
     );
   }
+  function hideAlert() {
+    clearTimeout(alertTimer);
+    activeAlertId = null;
+    q(".radar-alert").hidden = true;
+  }
   function radar() {
     if (!radarOn || (!position && !anchor)) return;
     const origin = position || anchor,
@@ -703,6 +730,8 @@ root.querySelectorAll("[data-lead]").forEach(button=>{const record=records.find(
           (a, b) =>
             distance(origin, coordinates(a)) - distance(origin, coordinates(b))
         );
+    if (activeAlertId && !near.some((r) => r.lead_id === activeAlertId))
+      hideAlert();
     const next =
       near.find((r) => !alerted.has(r.lead_id)) ||
       (prefs.earlyWarning && position
@@ -723,12 +752,15 @@ root.querySelectorAll("[data-lead]").forEach(button=>{const record=records.find(
     if (next && Date.now() - lastAlertAt > 15000) {
       lastAlertAt = Date.now();
       alerted.add(next.lead_id);
+      activeAlertId = next.lead_id;
+      clearTimeout(alertTimer);
+      alertTimer = setTimeout(hideAlert, 12000);
       const alert = q(".radar-alert");
       alert.hidden = false;
-      alert.innerHTML = `<strong>${w("Nearby research lead", "Piste à proximité")}</strong><span>${esc(next.project_name)} · ${(distance(origin, coordinates(next)) / 1000).toFixed(1)} km</span><button class="button secondary" data-open>${w("Review dossier", "Voir le dossier")}</button><a class="button secondary" href="${drive(next)}" target="_blank" rel="noopener noreferrer">${w("Drive here", "Y aller en voiture")}</a><button class="text-link" data-dismiss>${w("Dismiss", "Fermer")}</button>`;
+      alert.innerHTML = `<strong>${w("Nearby research lead", "Piste à proximité")}</strong><span>${esc(next.project_name)} · ${(distance(origin, coordinates(next)) / 1609.344).toFixed(1)} mi</span><button class="button secondary" data-open>${w("Review dossier", "Voir le dossier")}</button><a class="button secondary" href="${drive(next)}" target="_blank" rel="noopener noreferrer">${w("Drive here", "Y aller en voiture")}</a><button class="text-link" data-dismiss>${w("Dismiss", "Fermer")}</button>`;
       alert.querySelector("[data-open]").onclick = () => openLead(next.lead_id);
       alert.querySelector("[data-dismiss]").onclick = () => {
-        alert.hidden = true;
+        hideAlert();
       };
       if (notificationsOn && window.Notification?.permission === "granted") {
         try {
@@ -781,7 +813,7 @@ root.querySelectorAll("[data-lead]").forEach(button=>{const record=records.find(
       "GPS off · foreground use only",
       "GPS désactivé · premier plan uniquement"
     );
-    q(".radar-alert").hidden = true;
+    hideAlert();
   }
   function startGPS({ centre = false } = {}) {
     pendingCentre = centre;
@@ -858,7 +890,11 @@ root.querySelectorAll("[data-lead]").forEach(button=>{const record=records.find(
             : map.panTo([position.lat, position.lng], { animate: false });
         }
         q("[data-add-site]").disabled = false;
-        if(insideOnly)refresh();else{updateDistanceLabels();radar();}
+        if (insideOnly) refresh();
+        else {
+          updateDistanceLabels();
+          radar();
+        }
       },
       (e) => {
         if (disposed || run !== gpsGeneration) return;
@@ -944,7 +980,13 @@ root.querySelectorAll("[data-lead]").forEach(button=>{const record=records.find(
   };
   q("[data-radius]").onchange = (e) => {
     radius = Number(e.target.value);
-    prefs.radius=radius;try{localStorage.setItem("sap-map-preferences",JSON.stringify({...prefs,analyst,radius,markerStyle}));}catch{}
+    prefs.radius = radius;
+    try {
+      localStorage.setItem(
+        "sap-map-preferences",
+        JSON.stringify({ ...prefs, analyst, radius, markerStyle })
+      );
+    } catch {}
     alerted.clear();
     refresh();
   };
