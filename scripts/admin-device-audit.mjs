@@ -227,9 +227,47 @@ for (const device of matrix) {
         'const r=document.querySelector(".admin-login").getBoundingClientRect(),h=document.querySelector(".site-header").getBoundingClientRect();const fits=r.height+48<innerHeight-h.bottom;return Math.abs((r.left+r.right)/2-innerWidth/2)<2 && r.top>=h.bottom && (!fits || Math.abs((r.top+r.bottom)/2-(h.bottom+innerHeight)/2)<4)'
       )
     );
+    await click(".admin-login [type=submit]");
+    check(
+      "Empty sign-in guides the required email",
+      await exec(
+        'return document.querySelector(".admin-login [name=email]").validity.valueMissing && !document.querySelector(".lead-row")'
+      )
+    );
     await exec(
-      'document.querySelector("[name=email]").value=arguments[0];document.querySelector("[name=password]").value=arguments[1];document.querySelector(".admin-login").requestSubmit();',
-      [account.email, account.password]
+      'const e=document.querySelector(".admin-login [name=email]");e.value="not-an-email";document.querySelector(".admin-login").requestSubmit();'
+    );
+    check(
+      "Invalid email stays at the sign-in gate",
+      await exec(
+        'return document.querySelector(".admin-login [name=email]").validity.typeMismatch && !document.querySelector(".lead-row")'
+      )
+    );
+    await click("[data-forgot]");
+    await wait('return !!document.querySelector("[data-back]")');
+    await click("[data-back]");
+    check(
+      "Password recovery can be cancelled without sending a code",
+      await exec(
+        'return !!document.querySelector(".admin-login [name=password]")'
+      )
+    );
+    await exec(
+      'document.querySelector("[name=email]").value=arguments[0];document.querySelector("[name=password]").value="SAP-Audit-Wrong-Password-Only-2026!";document.querySelector(".admin-login").requestSubmit();',
+      [account.email]
+    );
+    await wait(
+      'return document.querySelector(".admin-login [role=status]").textContent.trim() && !document.querySelector(".admin-login [type=submit]").disabled'
+    );
+    check(
+      "Incorrect password shows an error and permits retry",
+      await exec(
+        'return !document.querySelector(".lead-row") && !!document.querySelector(".admin-login [role=status]").textContent.trim()'
+      )
+    );
+    await exec(
+      'document.querySelector("[name=password]").value=arguments[0];document.querySelector(".admin-login").requestSubmit();',
+      [account.password]
     );
     await wait('return document.querySelectorAll(".lead-row").length===67', 60);
     check("Real 67-record register loads", true);

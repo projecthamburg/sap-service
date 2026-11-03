@@ -79,7 +79,7 @@ export async function mountAdmin(root, language, config, all) {
   }
   function login(message = "") {
     if (disposed) return;
-    body.innerHTML = `<form class="admin-login"><h2>${w("Admin sign-in", "Connexion administrateur")}</h2><p>${w("Invited team members only.", "Réservé aux membres invités.")}</p><label class="field"><span>${w("Email", "Courriel")}</span><input name="email" type="email" autocomplete="username" required></label><label class="field"><span>${w("Password", "Mot de passe")}</span><input name="password" type="password" autocomplete="current-password" required></label><p role="status" class="admin-status">${esc(message)}</p><button type="submit" class="button primary">${w("Sign in", "Se connecter")}</button><button type="button" class="text-link" data-forgot>${w("Forgot password?", "Mot de passe oublié?")}</button></form>`;
+    body.innerHTML = `<form class="admin-login"><h1>${w("Admin sign-in", "Connexion administrateur")}</h1><p>${w("Invited team members only.", "Réservé aux membres invités.")}</p><label class="field"><span>${w("Email", "Courriel")}</span><input name="email" type="email" autocomplete="username" required></label><label class="field"><span>${w("Password", "Mot de passe")}</span><input name="password" type="password" autocomplete="current-password" required></label><p role="status" class="admin-status">${esc(message)}</p><button type="submit" class="button primary">${w("Sign in", "Se connecter")}</button><button type="button" class="text-link" data-forgot>${w("Forgot password?", "Mot de passe oublié?")}</button></form>`;
     const form = body.querySelector("form");
     form.onsubmit = async (e) => {
       e.preventDefault();
@@ -106,7 +106,7 @@ export async function mountAdmin(root, language, config, all) {
     }
   }
   function challenge(kind) {
-    body.innerHTML = `<form class="admin-login"><h2>${kind === "password" ? w("Choose your password", "Choisissez votre mot de passe") : w("Verification code", "Code de vérification")}</h2><p>${kind === "password" ? w("Use at least 14 characters, including upper and lower case, a number and a symbol.", "Utilisez au moins 14 caractères, des majuscules, minuscules, un chiffre et un symbole.") : w("Enter the code from your authentication method.", "Entrez le code de votre méthode d’authentification.")}</p><label class="field"><span>${kind === "password" ? w("New password", "Nouveau mot de passe") : w("Code", "Code")}</span><input name="value" type="${kind === "password" ? "password" : "text"}" autocomplete="${kind === "password" ? "new-password" : "one-time-code"}" required ${kind === "password" ? 'minlength="14"' : 'inputmode="numeric"'}></label><p role="status"></p><button type="submit" class="button primary">${w("Continue", "Continuer")}</button></form>`;
+    body.innerHTML = `<form class="admin-login"><h1>${kind === "password" ? w("Choose your password", "Choisissez votre mot de passe") : w("Verification code", "Code de vérification")}</h1><p>${kind === "password" ? w("Use at least 14 characters, including upper and lower case, a number and a symbol.", "Utilisez au moins 14 caractères, des majuscules, minuscules, un chiffre et un symbole.") : w("Enter the code from your authentication method.", "Entrez le code de votre méthode d’authentification.")}</p><label class="field"><span>${kind === "password" ? w("New password", "Nouveau mot de passe") : w("Code", "Code")}</span><input name="value" type="${kind === "password" ? "password" : "text"}" autocomplete="${kind === "password" ? "new-password" : "one-time-code"}" required ${kind === "password" ? 'minlength="14"' : 'inputmode="numeric"'}></label><p role="status"></p><button type="submit" class="button primary">${w("Continue", "Continuer")}</button></form>`;
     const f = body.querySelector("form");
     f.onsubmit = (e) => {
       e.preventDefault();
@@ -118,7 +118,7 @@ export async function mountAdmin(root, language, config, all) {
     };
   }
   function recover() {
-    body.innerHTML = `<form class="admin-login"><h2>${w("Reset password", "Réinitialiser le mot de passe")}</h2><label class="field"><span>${w("Account email", "Courriel du compte")}</span><input name="email" type="email" autocomplete="username" required></label><p role="status"></p><button class="button primary" type="submit">${w("Send code", "Envoyer le code")}</button><button type="button" class="text-link" data-back>${w("Back to sign-in", "Retour à la connexion")}</button></form>`;
+    body.innerHTML = `<form class="admin-login"><h1>${w("Reset password", "Réinitialiser le mot de passe")}</h1><label class="field"><span>${w("Account email", "Courriel du compte")}</span><input name="email" type="email" autocomplete="username" required></label><p role="status"></p><button class="button primary" type="submit">${w("Send code", "Envoyer le code")}</button><button type="button" class="text-link" data-back>${w("Back to sign-in", "Retour à la connexion")}</button></form>`;
     let step = 0;
     const f = body.querySelector("form");
     f.querySelector("[data-back]").onclick = () => login();
@@ -222,7 +222,7 @@ export async function mountAdmin(root, language, config, all) {
     }
   } catch (e) {
     if (!navigator.onLine || e.name === "TypeError")
-      body.innerHTML = `<div class="admin-login"><h2>${w("Connect to continue", "Connexion requise")}</h2><p>${w("Sign-in and private site data require an internet connection. Reconnect, then refresh the app.", "La connexion et les sites privés nécessitent Internet. Reconnectez-vous, puis actualisez l’application.")}</p><button class="button primary" data-retry-offline>${w("Retry", "Réessayer")}</button></div>`;
+      body.innerHTML = `<div class="admin-login"><h1>${w("Connect to continue", "Connexion requise")}</h1><p>${w("Sign-in and private site data require an internet connection. Reconnect, then refresh the app.", "La connexion et les sites privés nécessitent Internet. Reconnectez-vous, puis actualisez l’application.")}</p><button class="button primary" data-retry-offline>${w("Retry", "Réessayer")}</button></div>`;
     else body.textContent = e.message;
     body
       .querySelector("[data-retry-offline]")

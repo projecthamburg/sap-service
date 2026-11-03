@@ -32,11 +32,6 @@
   justify-content: center;
   padding: 32px 24px;
 }
-@media (max-width: 760px) {
-  .admin-shell {
-    --admin-header-height: 101px;
-  }
-}
 .admin-shell:has(> #admin-body > .admin-login) > :is(h1, .eyebrow) {
   display: none;
 }
@@ -48,8 +43,10 @@
 #admin-body > .admin-login {
   margin: 0;
 }
-.admin-login h2 {
+.admin-login :is(h1, h2) {
   font-size: 1.8rem;
+  line-height: 1.2;
+  margin: 0;
 }
 .admin-login .text-link {
   justify-self: start;
@@ -880,13 +877,18 @@ body.maps-app .admin-account {
 }
 body.maps-app .map-status {
   position: fixed;
+  margin: 0;
   left: 380px;
-  bottom: 0;
+  bottom: 16px;
+  min-height: 0;
+  max-height: 16px;
+  line-height: 16px;
+  overflow: hidden;
   max-width: calc(100vw - 440px);
   font-size: 0.65rem;
   z-index: 10;
   background: var(--admin-panel);
-  padding: 3px 8px;
+  padding: 0 8px;
   border-radius: 8px;
 }
 body.maps-app .map-filter-disclosure {
@@ -1020,6 +1022,7 @@ body.maps-app .map-filters {
 }
 .map-app-nearby {
   position: absolute;
+  left: 380px;
   right: 16px;
   bottom: 34px;
   z-index: 18;
@@ -1027,6 +1030,7 @@ body.maps-app .map-filters {
   border-radius: 22px;
   box-shadow: 0 3px 14px #0004;
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   padding: 8px 12px;
@@ -1266,7 +1270,7 @@ body.maps-app .site-header .brand svg {
 }
 body.maps-app .admin-shell:has(> #admin-body > .admin-login) {
   min-height: 100dvh;
-  padding: 88px 24px 24px;
+  padding: calc(var(--admin-header-height, 64px) + 24px) 24px 24px;
 }
 @media (max-width: 760px) {
   body.maps-app:has(.lead-sidebar.sheet-expanded) .map-status {
@@ -1277,5 +1281,136 @@ body.maps-app .admin-shell:has(> #admin-body > .admin-login) {
     top: 246px;
     width: calc(100vw - 24px);
     max-width: none;
+  }
+}
+
+/* Preserve the map and its controls in phone landscape and short windows. */
+@media (max-height: 560px) {
+  body.maps-app .map-app-import {
+    display: none;
+  }
+  .maps-app .radar-alert {
+    top: 96px;
+    left: 12px;
+    width: min(420px, calc(100vw - 24px));
+    max-height: calc(100dvh - 108px);
+    overflow: auto;
+  }
+  body.maps-app .site-header,
+  body.maps-app .site-header .nav-inner {
+    height: 48px;
+    min-height: 48px;
+  }
+  body.maps-app .site-header .brand svg {
+    height: 36px;
+  }
+  body.maps-app .admin-toolbar {
+    top: 48px;
+    height: 40px;
+  }
+  body.maps-app .admin-account {
+    gap: 14px;
+  }
+  body.maps-app .admin-account .text-link {
+    font-size: 0.72rem;
+  }
+  body.maps-app .map-layout,
+  body.maps-app .map-layout[data-layout="map"] {
+    inset: 88px 0 0;
+  }
+  body.maps-app .map-app-search {
+    top: 8px;
+    max-width: calc(100% - 88px);
+  }
+  body.maps-app .map-app-chips {
+    display: none;
+  }
+  body.maps-app .map-app-controls {
+    top: 8px;
+    bottom: auto;
+    right: 12px;
+    gap: 8px;
+  }
+  body.maps-app .lead-sidebar,
+  body.maps-app .map-layout[data-layout="map"] .lead-sidebar {
+    top: 80px;
+    width: 300px;
+  }
+  body.maps-app .map-app-nearby {
+    left: 328px;
+    right: 76px;
+    bottom: 28px;
+  }
+  body.maps-app .map-status {
+    top: 158px;
+    bottom: auto;
+    left: 340px;
+    right: 88px;
+    max-width: none;
+    max-height: 16px;
+    line-height: 16px;
+    padding-block: 0;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    pointer-events: none;
+  }
+  body.maps-app .map-filter-disclosure {
+    top: 148px;
+    max-height: calc(100dvh - 164px);
+  }
+}
+@media (max-height: 560px) and (max-width: 760px) {
+  body.maps-app .lead-sidebar,
+  body.maps-app .map-layout[data-layout="map"] .lead-sidebar {
+    top: auto;
+    width: 100%;
+    min-height: 64px;
+  }
+  body.maps-app .site-sheet-toggle {
+    gap: 2px;
+    padding: 6px 12px;
+    min-height: 48px;
+  }
+  body.maps-app .site-sheet-toggle strong {
+    font-size: 0.8rem;
+  }
+  body.maps-app .sheet-grip {
+    margin-bottom: 0;
+  }
+  body.maps-app .map-app-nearby {
+    left: 12px;
+    right: 76px;
+    bottom: 68px;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+  body.maps-app .map-app-nearby [data-stop] {
+    display: none;
+  }
+  body.maps-app .map-app-nearby [data-gps] {
+    max-width: 102px;
+    font-size: 0.65rem;
+    line-height: 1.2;
+    min-height: 44px;
+    padding: 6px 8px;
+  }
+  body.maps-app .map-app-nearby select {
+    width: 100px;
+    height: 44px;
+    min-height: 44px;
+    font-size: 0.65rem;
+    padding: 6px;
+  }
+  body.maps-app .map-app-nearby [data-radar-status] {
+    flex: 1;
+    min-width: 0;
+    max-width: 90px;
+    text-align: left;
+    font-size: 0.6rem;
+    line-height: 1.2;
+  }
+  body.maps-app .map-status {
+    left: 12px;
   }
 }

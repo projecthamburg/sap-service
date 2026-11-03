@@ -252,9 +252,14 @@ try {
     e.value = "";
     e.dispatchEvent(new Event("input", { bubbles: true }));
   });
+  await p.$eval(".lead-sidebar", (e) => e.classList.remove("sheet-expanded"));
   for (const [width, height] of [
     [390, 844],
     [844, 390],
+    [667, 375],
+    [390, 390],
+    [390, 300],
+    [768, 1024],
     [1024, 1366],
     [1440, 1000],
   ]) {
@@ -266,8 +271,53 @@ try {
         () => document.documentElement.scrollWidth <= innerWidth + 1
       )
     );
-    await p.screenshot({ path: resolve(output, `pwa-${width}-night.png`) });
+    const overlaps = await p.evaluate(() => {
+      const selectors = [
+        ".map-app-search",
+        ".map-app-chips",
+        ".map-app-controls",
+        ".map-app-nearby",
+        ".lead-sidebar",
+        ".map-status",
+      ];
+      const rects = selectors
+        .map((s) => [s, document.querySelector(s).getBoundingClientRect()])
+        .filter(([, r]) => r.width && r.height);
+      const collisions = [];
+      for (let i = 0; i < rects.length; i++)
+        for (let j = i + 1; j < rects.length; j++) {
+          const [a, r] = rects[i],
+            [b, s] = rects[j];
+          if (
+            Math.min(r.right, s.right) - Math.max(r.left, s.left) > 1 &&
+            Math.min(r.bottom, s.bottom) - Math.max(r.top, s.top) > 1
+          )
+            collisions.push(a + " / " + b);
+        }
+      return collisions;
+    });
+    check(
+      `Standalone ${width}×${height} controls do not overlap: ${overlaps.join(", ") || "clear"}`,
+      overlaps.length === 0
+    );
+    await p.screenshot({
+      path: resolve(output, `pwa-${width}-${height}-night.png`),
+    });
   }
+  await p.setViewport({ width: 390, height: 844 });
+  await click(p, ".map-app-search .map-app-icon:last-child");
+  await p.waitForSelector("dialog [data-open-import]");
+  await click(p, "dialog [data-open-import]");
+  await p.waitForSelector("dialog [data-save]");
+  check(
+    "Phone app exposes research import and fieldwork backup through options",
+    true
+  );
+  check(
+    "Phone import remains disabled until a reviewed file is supplied",
+    await p.$eval("dialog [data-save]", (e) => e.disabled)
+  );
+  await click(p, "dialog [data-close]");
   await p.reload({ waitUntil: "networkidle2" });
   await p.waitForSelector(".lead-row");
   await p.$eval(
