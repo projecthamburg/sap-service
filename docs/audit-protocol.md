@@ -51,3 +51,9 @@ Archive the immediate live version before replacement. Use the authenticated ver
 
 For acceptance, compare all actual Google SDK marker positions in light/dark modes with the independent approved source fixture, alongside the authenticated API payload. Check driving destinations, locked audited coordinates, both languages, normal staff/demo access, fallback, standalone app, mobile/tablet portrait and landscape, and desktop engines. Keep actual rendered marker observations, screenshots, source hashes and failed attempts private. A count alone cannot establish correct geography. Revoke the disposable test account after closing all cloud sessions; leave permanent staff/demo accounts unchanged.
 
+## Demo sign-in regression
+
+Exercise the literal `demo` username on the regular form as well as the dedicated prefilled link. Test incorrect-password correction, localized identifier guidance, invited staff email, demo/team links, reload/sign-out, preserved language/app mode and the demo manifest. A cached staff session opening the demo link must not render staff research or request the private Inbox. Keep server-role denial checks separate from disabled UI controls. Use only the reserved demo and disposable staff fixtures, with no password resets or invitation emails.
+
+The standalone map intentionally hides the portal's tool navigation. Test its visible map workflow and reload rather than clicking a hidden Inbox button. When an audit changes a field value programmatically, dispatch the corresponding input event so localized validation follows the same error-clearing path as real typing. Preserve failed harness attempts separately from successful device acceptance.
+
