@@ -1,6 +1,9 @@
 // Run only with an authorized disposable SAP admin account. Evidence stays private.
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { siteTitle } from "../admin/presentation.js";
+import { mapExpectations, observeGoogleMarkers, renderedGooglePoints, researchMatchesAudit } from "./evidence/map-expectations.mjs";
+const expected = await mapExpectations();
 try {
   process.loadEnvFile(".env");
 } catch {}
@@ -300,8 +303,8 @@ for (const device of matrix) {
       'document.querySelector("[name=password]").value=arguments[0];document.querySelector(".admin-login").requestSubmit();',
       [account.password]
     );
-    await wait('return document.querySelectorAll(".lead-row").length===67', 60);
-    check("Real 67-record register loads", true);
+    await wait(`return document.querySelectorAll(".lead-row").length===${expected.count}`, 60);
+    check(`Approved ${expected.count}-record register loads`, true);
     await wait('return !!document.querySelector(".gm-style")', 45);
     await pause(2500);
     check(
@@ -310,11 +313,23 @@ for (const device of matrix) {
         'return !document.querySelector(".map-canvas").textContent.includes("Oops!") && !document.querySelector(".map-status").textContent.includes("authorization failed")'
       )
     );
+    const response = await wd(`/session/${id}/execute/async`, {script: `const done=arguments[arguments.length-1],expected=arguments[0]; (async()=>{const config=await(await fetch('./site-config.json')).json(),key=Object.keys(sessionStorage).find(k=>k.endsWith('.accessToken')),r=await fetch(config.apiUrl+'/admin/maps/dataset',{headers:{Authorization:'Bearer '+sessionStorage.getItem(key)}}),data=await r.json();return {count:data.records?.length,matches:(${researchMatchesAudit.toString()})(data.records,expected)}})().then(done,e=>done({error:e.message}));`,args:[expected]});
+    entry.datasetAudit = response;
+    check("Every retained ID, address, coordinate and audit hash matches the approved source", response.matches === true);
+    await exec(`(${observeGoogleMarkers.toString()})(); document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';`);
+    await wait(`return (window.__sapAuditMarkers||[]).filter(m=>m.getMap()).length===${expected.count}`);
     for (const theme of ["light", "dark"]) {
       await exec("document.documentElement.dataset.theme=arguments[0];", [
         theme,
       ]);
       await pause(700);
+      await wait(`return (window.__sapAuditMarkers||[]).filter(m=>m.getMap()).length===${expected.count}`);
+      const positions = await exec(`return (${renderedGooglePoints.toString()})();`);
+      entry.renderedAudits ||= [];
+      const exact = positions.length===expected.count && expected.records.every(r=>positions.some(p=>p.title===siteTitle(r.name)&&Math.abs(p.lat-r.lat)<1e-8&&Math.abs(p.lng-r.lng)<1e-8));
+      entry.renderedAudits.push({theme,positions,exact});
+      check(theme + " actual Google marker positions match all audited points", exact);
+
       check(
         theme + " fits viewport",
         await exec(
@@ -328,14 +343,14 @@ for (const device of matrix) {
     }
     await click("[data-quick=frecon]");
     check(
-      "Frecon filter shows six researched bid relationships",
-      await exec('return document.querySelectorAll(".lead-row").length===6')
+      "Frecon filter follows the audited register",
+      await exec(`return document.querySelectorAll(".lead-row").length===${expected.filters.frecon}`)
     );
     await click("[data-clear]");
     await click("[data-quick=pomerleau]");
     check(
-      "Pomerleau filter excludes negative references",
-      await exec('return document.querySelectorAll(".lead-row").length===7')
+      "Pomerleau filter follows audited participating sites",
+      await exec(`return document.querySelectorAll(".lead-row").length===${expected.filters.pomerleau}`)
     );
     await click("[data-clear]");
     await click(".lead-row");
@@ -366,6 +381,13 @@ for (const device of matrix) {
     );
     await capture("dossier");
     await click("dialog [data-close]");
+    await click('[data-lead="SAP-C030"]');
+    await wait('return !!document.querySelector("dialog[open]")');
+    const corrected = expected.records.find(r=>r.id==='SAP-C030');
+    check("C030 uses the audited Saint-Joseph location and route", await exec('const d=document.querySelector("dialog"),u=new URL(d.querySelector("[data-route]").href),point=u.searchParams.get("destination").split(",").map(Number);return d.textContent.includes("281")&&Math.abs(point[0]-arguments[0])<1e-8&&Math.abs(point[1]-arguments[1])<1e-8&&d.querySelector("[data-locate]").disabled',[corrected.lat,corrected.lng]));
+    await capture("corrected-c030");
+    await click("dialog [data-close]");
+
     await click("[data-settings]");
     check(
       "Settings opens",
@@ -385,7 +407,7 @@ for (const device of matrix) {
     check(
       "Fallback keeps real data",
       await exec(
-        'return document.querySelectorAll(".lead-row").length===67 && document.querySelector(".leaflet-control-attribution").textContent.includes("OpenStreetMap")'
+        `return document.querySelectorAll(".lead-row").length===${expected.count} && document.querySelector(".leaflet-control-attribution").textContent.includes("OpenStreetMap")`
       )
     );
     await click("[data-tool=inbox]");
@@ -398,7 +420,7 @@ for (const device of matrix) {
     appURL.searchParams.set("workspace", "maps");
     appURL.hash = "/en/admin/maps";
     await wd(`/session/${id}/url`, { url: appURL.href });
-    await wait('return document.querySelectorAll(".lead-row").length===67', 60);
+    await wait(`return document.querySelectorAll(".lead-row").length===${expected.count}`, 60);
     check(
       "Standalone map preserves the authenticated account",
       await exec(

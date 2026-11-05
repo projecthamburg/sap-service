@@ -51,6 +51,9 @@ export function companyLabel(record, w) {
 }
 export function stageLabel(value, w) {
   const labels = {
+    active: ["Active site", "Site actif"],
+    finishing: ["Finishing", "Finition"],
+    finished: ["Finished", "Terminé"],
     "planning/zoning": ["Planning", "Planification"],
     "tender/award": ["Tender stage", "Appel d’offres"],
     "active construction": ["Under construction", "En construction"],

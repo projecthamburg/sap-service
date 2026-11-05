@@ -5,11 +5,13 @@ import { resolve, extname } from "node:path";
 import { createHash } from "node:crypto";
 import { captureDOM } from "./evidence/dom-capture.mjs";
 import { importErrors, quickMatch } from "../admin/model.js";
+import { mapExpectations, researchMatchesAudit } from "./evidence/map-expectations.mjs";
+const expected = await mapExpectations();
 const staged = process.argv.includes("--staged");
 const base =
   process.env.SAP_ADMIN_AUDIT_URL ||
   "https://projecthamburg.github.io/sap-service/";
-const output = resolve(".local/admin-map/authenticated-audit");
+const output = resolve(process.env.SAP_ADMIN_AUDIT_OUTPUT || ".local/admin-map/authenticated-audit");
 await mkdir(output, { recursive: true, mode: 0o700 });
 const account = JSON.parse(
   await readFile(
@@ -132,7 +134,7 @@ try {
   for (let n = 0; n < 100 && !research?.records; n++) await pause(25);
   check(
     "Authenticated real register loaded",
-    research?.records?.length === 67 && (await count()) === 67
+    research?.records && researchMatchesAudit(research.records, expected) && (await count()) === expected.count
   );
   check(
     "Real tier counts",
@@ -144,10 +146,7 @@ try {
       )
       .then(
         (c) =>
-          c.Immediate === 15 &&
-          c["Near-term"] === 16 &&
-          c.Strategic === 15 &&
-          c.Monitor === 21
+          Object.entries(expected.tiers).every(([tier, count]) => c[tier] === count)
       )
   );
   await page.waitForSelector(".gm-style", { timeout: 30000 });
@@ -178,19 +177,8 @@ try {
   await click(".lead-row");
   await page.waitForSelector("dialog[open]");
   await click("dialog [data-full-record] > summary");
-  await click("dialog [data-locate]");
-  await page.waitForFunction(
-    () =>
-      document.querySelector("dialog [data-location-status]").textContent
-        .length > 0,
-    { timeout: 30000 }
-  );
-  check(
-    "Live Google address review succeeds",
-    await page.$eval("dialog [data-location-status]", (e) =>
-      e.textContent.includes("Address located by Google")
-    )
-  );
+  check("Audited coordinates cannot be replaced by Google address lookup", await page.$eval("dialog [data-locate]", e => e.disabled));
+  check("Audited location provenance is visible", await page.$eval("dialog [data-location-status]", e => e.textContent.includes("audit coordinates")));
   await click("dialog [data-street]");
   await page.waitForFunction(
     () =>
@@ -236,16 +224,16 @@ try {
     stale.status === 409
   );
   await click(".tier-controls input[value=Monitor]");
-  check("Monitor toggle leaves 46 leads", (await count()) === 46);
+  check("Monitor toggle follows the approved audit", (await count()) === expected.count - expected.tiers.Monitor);
   await click(".tier-controls input[value=Monitor]");
   for (const key of ["frecon", "axor", "pomerleau", "healthcare"]) {
     await click(`[data-quick=${key}]`);
     check(
       key + " uses source-aware counts",
       (await count()) ===
-        research.records.filter((r) => quickMatch(r, key)).length
+        expected.filters[key]
     );
-    if (key === "frecon")
+    if (key === "frecon" && expected.filters.frecon > 0)
       check(
         "Bid dates distinguish published tender closes",
         await page.$eval(".map-deadline-note", (e) =>
@@ -287,13 +275,13 @@ try {
   await click("[data-inside]");
   check(
     "Radius filter narrows real coordinates",
-    (await count()) > 0 && (await count()) < 67
+    (await count()) > 0 && (await count()) < expected.count
   );
   await click("[data-clear]");
   await page.select("[data-engine]", "leaflet");
   await page.waitForSelector(".leaflet-pane");
   await pause(1500);
-  check("Fallback retains all real leads", (await count()) === 67);
+  check("Fallback retains all real leads", (await count()) === expected.count);
   check(
     "Fallback includes map attribution",
     await page.$eval(".leaflet-control-attribution", (e) =>

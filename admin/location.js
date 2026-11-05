@@ -1,4 +1,7 @@
 import { point, distance } from "./model.js";
+export function locationForMap(record, review) {
+  return record.location_audit ? point(record) : review || point(record);
+}
 export function provinceForLead(record) {
   const text = [record.site_address, record.region, record.city].join(" "),
     on = /\bON\b|\bOntario\b/i.test(text),

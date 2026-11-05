@@ -56,6 +56,7 @@ const ALLOWED = new Set([
   "longitude_estimate",
   "opportunity_score",
   "satellite_sites",
+  "location_audit",
 ]);
 export function validateDataset(records) {
   const errors = [],
@@ -117,6 +118,21 @@ export function validateDataset(records) {
         errors.push(`${p}: ${k} must be a text array (up to 200 items).`);
     if (!r.sources?.length || !r.source_ids?.length)
       errors.push(`${p}: research citations are required.`);
+    if (r.location_audit !== undefined) {
+      const a = r.location_audit;
+      if (!a || typeof a !== "object" || Array.isArray(a) ||
+          Object.keys(a).some(k => !["date", "source", "sha256", "status", "confidence", "approximateAreaKm2"].includes(k)) ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(a.date || "") ||
+          !Number.isFinite(Date.parse(a.date + "T12:00:00Z")) ||
+          new Date(a.date + "T12:00:00Z").toISOString().slice(0, 10) !== a.date ||
+          typeof a.source !== "string" || !a.source.trim() || a.source.length > 500 ||
+          !/^[a-f0-9]{64}$/.test(a.sha256 || "") ||
+          !["active", "finishing", "finished"].includes(a.status) ||
+          !["high", "medium", "low"].includes(a.confidence) ||
+          !Number.isFinite(a.approximateAreaKm2) || a.approximateAreaKm2 <= 0 || a.approximateAreaKm2 > 1000 ||
+          !Number.isFinite(r.latitude_estimate) || !Number.isFinite(r.longitude_estimate))
+        errors.push(`${p}: invalid location audit. Supply the source/date/hash, audited status/confidence, area and coordinates.`);
+    }
     if (
       r.satellite_sites !== undefined &&
       (!Array.isArray(r.satellite_sites) ||

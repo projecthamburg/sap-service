@@ -119,7 +119,10 @@ export function parseCSV(text) {
     return Object.fromEntries(
       keys.map((k, n) => {
         let v = row[n];
-        if (
+        if (k === "location_audit") {
+          try { v = v.trim() ? JSON.parse(v) : undefined; }
+          catch { throw Error(`Row ${i + 2}: location_audit contains invalid JSON.`); }
+        } else if (
           [
             "sources",
             "source_ids",

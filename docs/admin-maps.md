@@ -24,6 +24,12 @@ Invite sends Cognito's transactional invitation and requires a new password at f
 
 ## Real research, not sample leads
 
+The active register now follows the owner's November 5, 2026 `audited_real_locations.txt`: 30 retained research sites, with all 30 supplied coordinates corrected and 37 records removed from the active register. Finished sites explicitly included in that file remain included. Private versioned snapshots preserve the preceding register and its history. Location confidence is separate from commercial qualification; these owner-supplied points and approximate areas do not establish surveyed boundaries or available contracts. The source describes non-commercial research and field/documentary auditing.
+
+Audited records retain structured `location_audit` metadata: source filename/hash, audit date, activity status, location confidence and approximate area. Their supplied WGS84 coordinates are authoritative for map pins, distance calculations and directions. Google address review cannot replace an audited point. Distinct nearby records remain distinct, and no secondary points are invented for bundled projects. The source file and operational records remain private.
+
+The following November 2 counts and tender checks describe the preceding register, not the current active list.
+
 The AI Studio ZIP contains synthetic records. Those records, its invented satellite coordinates, simulated GPS fallback, and substitute logo were excluded from the operational implementation.
 
 The owner supplied a separate 67-record research register through Dynamos on November 2, 2026: Immediate 15, Near-term 16, Strategic 15, Monitor 21. Its original file SHA256 is `617f7dae70c6a21c623376c23adc98b69505feff00aa9c059bde685dd51a5346`. The original remains in ignored private local storage. The operational copy is in private S3, outside the public repository, build and website assets. It is a dated research register, not an automatic live lead-discovery feed or confirmation of contract availability.
@@ -51,6 +57,8 @@ JSON is the lossless research exchange format. CSV exports preserve research arr
 An import is a complete replacement, not an implicit merge. Exports include all records, regardless of active filters. The API uses an expected version and transactional metadata write so another administrator's changes cannot be silently overwritten. S3 snapshots are content-addressed under `admin/maps/datasets/`; metadata and audit records use `MAPS#` keys in the existing SAP private DynamoDB table. They do not enter the received-submissions index or notification outbox. Dataset history is private operational storage and does not inherit the enquiry upload expiry. Retention/deletion is the operator's responsibility.
 
 ## Verification and handover
+
+For a location correction, prepare an independent private expectation file from the approved source and set `SAP_MAP_AUDIT_EXPECTATIONS` when running the authenticated Chrome and BrowserStack audits. Checks compare the exact retained ID set, names, addresses, coordinates, audit status and source hash, plus the actual Google SDK marker coordinates in both themes and the corrected driving destination. CSV round trips preserve structured audit metadata. Do not publish private expectation files or authenticated screenshots.
 
 `npm test` includes schema, CSV, geometry, heading, negative contractor references, location mismatch, HTML escaping, JWT claims and optimistic-write tests. `npm run test:audit` checks the public website and invitation-only inbox gate. `node scripts/admin-audit.mjs --staged` exercises authenticated real research in a disposable Chrome browser using locally staged public assets under the approved Pages origin; omit `--staged` for the live release. It requires a private, authorized audit account JSON at `.local/admin-map/test-account.json` (email/password), or a path in `SAP_ADMIN_AUDIT_ACCOUNT`. Never use or publish owner passwords.
 

@@ -9,7 +9,7 @@ import {
 } from "./presentation.js";
 import { isMapsApp } from "../src/pwa.js";
 import { fieldLead, drivingURL, sitePinSVG, VISIT_LABELS } from "./field.js";
-import { reviewedLocation } from "./location.js";
+import { reviewedLocation, locationForMap } from "./location.js";
 import { mapShell, dossierHTML } from "./views.js";
 import { escapeHTML as esc } from "../src/utils.js";
 import {
@@ -229,7 +229,7 @@ export function mountMaps(root, { request, language, readOnly = false }) {
       rows
         .map(
           (r) =>
-            `<button class="lead-row ${selected === r.lead_id ? "selected" : ""}" data-lead="${esc(r.lead_id)}" style="--tier:${COLORS[r.priority]}"><span class="lead-row-meta">${esc(priorityLabel(r.priority, w))}<strong>${w(...VISIT_LABELS[visitState(r.lead_id)])}</strong></span><span class="lead-row-title">${esc(siteTitle(r.project_name))}</span><span>${esc(companyLabel(r, w))} · ${esc(readable(r.city))}</span><small>${esc(stageLabel(r.project_stage, w))}<span data-distance>${position && coordinates(r) ? ` · ${(distance(position, coordinates(r)) / 1609.344).toFixed(1)} mi` : ""}</span></small></button>`
+            `<button class="lead-row ${selected === r.lead_id ? "selected" : ""}" data-lead="${esc(r.lead_id)}" style="--tier:${COLORS[r.priority]}"><span class="lead-row-meta">${esc(priorityLabel(r.priority, w))}<strong>${w(...VISIT_LABELS[visitState(r.lead_id)])}</strong></span><span class="lead-row-title">${esc(siteTitle(r.project_name))}</span><span>${esc(companyLabel(r, w))} · ${esc(readable(r.city))}</span><small>${esc(stageLabel(r.location_audit?.status || r.project_stage, w))}<span data-distance>${position && coordinates(r) ? ` · ${(distance(position, coordinates(r)) / 1609.344).toFixed(1)} mi` : ""}</span></small></button>`
         )
         .join("") ||
       `<p class="map-empty">${w("No matching leads. Change your filters.", "Aucune piste. Modifiez vos filtres.")}</p>`;
@@ -281,9 +281,7 @@ export function mountMaps(root, { request, language, readOnly = false }) {
     markers = [];
   }
   function coordinates(r) {
-    return engine === "google" && reviews.has(r.lead_id)
-      ? reviews.get(r.lead_id)
-      : point(r);
+    return locationForMap(r, engine === "google" ? reviews.get(r.lead_id) : undefined);
   }
   function paint() {
     if (!map) return;
@@ -730,6 +728,7 @@ export function mountMaps(root, { request, language, readOnly = false }) {
           );
         });
         d.querySelector("[data-locate]").onclick = async (e) => {
+          if (r.location_audit) return;
           const b = e.currentTarget;
           b.disabled = true;
           const s = d.querySelector("[data-location-status]");
