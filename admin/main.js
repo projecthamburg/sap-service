@@ -31,7 +31,14 @@ export async function mountAdmin(root, language, config, all) {
   prepareMapsApp();
   root.innerHTML = `<section class="admin-shell"><p class="eyebrow">SAP SERVICE INC. / ${w("OPERATIONS", "OPÉRATIONS")}</p><h1>${w("Your workspace.", "Votre espace de travail.")}</h1><div id="admin-body" role="region" aria-label="Admin"><p role="status">${w("Connecting securely…", "Connexion sécurisée…")}</p></div></section>`;
   const body = root.querySelector("#admin-body");
-  const demoEntry = new URLSearchParams(location.search).get("demo") === "1";
+  let demoEntry = new URLSearchParams(location.search).get("demo") === "1";
+  const identifierPattern = String.raw`\s*(?:[dD][eE][mM][oO]|[^\s@]+@[^\s@]+\.[^\s@]+)\s*`;
+  function entryURL(demo) {
+    const url = new URL(location.href);
+    if (demo) url.searchParams.set("demo", "1");
+    else url.searchParams.delete("demo");
+    return url.href;
+  }
   const connectionError = (e) =>
     !navigator.onLine ||
     ["TypeError", "TimeoutError", "NetworkError"].includes(e.name) ||
@@ -97,7 +104,7 @@ export async function mountAdmin(root, language, config, all) {
   function login(message = "") {
     if (disposed) return;
     document.body.classList.remove("demo-session");
-    body.innerHTML = `<form class="admin-login"><h1>${demoEntry ? w("Demo sign-in", "Connexion démo") : w("Admin sign-in", "Connexion administrateur")}</h1><p>${demoEntry ? w("Read-only map demo. Private enquiries and résumés are hidden.", "Carte en lecture seule. Les demandes et CV privés sont masqués.") : w("Invited team members only.", "Réservé aux membres invités.")}</p><label class="field"><span>${demoEntry ? w("Username", "Nom d’utilisateur") : w("Email", "Courriel")}</span><input name="email" type="${demoEntry ? "text" : "email"}" ${demoEntry ? 'value="demo" readonly' : ""} autocomplete="username" required></label><label class="field"><span>${w("Password", "Mot de passe")}</span><input name="password" type="password" autocomplete="current-password" required></label><p role="status" class="admin-status">${esc(message)}</p><button type="submit" class="button primary">${w("Sign in", "Se connecter")}</button>${demoEntry ? "" : `<button type="button" class="text-link" data-forgot>${w("Forgot password?", "Mot de passe oublié?")}</button>`}</form>`;
+    body.innerHTML = `<form class="admin-login"><h1>${demoEntry ? w("Demo sign-in", "Connexion démo") : w("Admin sign-in", "Connexion administrateur")}</h1><p>${demoEntry ? w("Read-only map demo. Private enquiries and résumés are hidden.", "Carte en lecture seule. Les demandes et CV privés sont masqués.") : w("Use your invited email, or demo for the read-only map.", "Utilisez votre courriel d’invitation, ou demo pour la carte en lecture seule.")}</p><label class="field"><span>${demoEntry ? w("Username", "Nom d’utilisateur") : w("Email or username", "Courriel ou nom d’utilisateur")}</span><input name="email" type="text" ${demoEntry ? 'value="demo" readonly' : `inputmode="email" pattern="${identifierPattern}" title="${esc(w("Enter your invited email address, or demo.", "Entrez votre courriel d’invitation, ou demo."))}"`} autocomplete="username" autocapitalize="none" spellcheck="false" required></label><label class="field"><span>${w("Password", "Mot de passe")}</span><input name="password" type="password" autocomplete="current-password" required></label><p role="status" class="admin-status">${esc(message)}</p><button type="submit" class="button primary">${w("Sign in", "Se connecter")}</button>${demoEntry ? "" : `<button type="button" class="text-link" data-forgot>${w("Forgot password?", "Mot de passe oublié?")}</button>`}<a class="text-link" ${demoEntry ? "data-team-entry" : "data-demo-entry"} href="${esc(entryURL(!demoEntry))}">${demoEntry ? w("Team sign-in", "Connexion de l’équipe") : w("Use demo login", "Accéder à la démo")}</a></form>`;
     const form = body.querySelector("form");
     form.onsubmit = async (e) => {
       e.preventDefault();
@@ -177,6 +184,10 @@ export async function mountAdmin(root, language, config, all) {
       const session = await request("/admin/session");
       if (disposed || g !== generation) return;
       if (demoEntry && !session.demo) { login(); return; }
+      if (session.demo && !demoEntry) {
+        demoEntry = true;
+        history.replaceState(null, "", entryURL(true));
+      }
       document.body.classList.toggle("demo-session", !!session.demo);
       prepareMapsApp();
       body.innerHTML = `${session.demo ? `<p class="demo-notice" role="status">${w("Demo workspace · Read only. Private enquiries, résumés and live visit records are hidden.", "Espace démo · Lecture seule. Les demandes, CV et visites privés sont masqués.")}</p>` : ""}<div class="admin-toolbar"><nav aria-label="${w("Admin tools", "Outils administrateur")}"><button class="button secondary" data-tool="maps">${w("Maps", "Cartes")}</button><button class="button secondary" data-tool="inbox">${w("Inbox", "Demandes et candidatures")}</button></nav><div class="admin-account"><span>${esc(auth.accountLabel() || session.user)}</span><button class="text-link" data-open-app>${w("Open Maps app", "Ouvrir l’app Cartes")}</button><button class="text-link" data-install-app>${w("Install Maps app", "Installer l’app Cartes")}</button><button class="text-link" data-map-fullscreen hidden></button><button class="text-link" data-logout>${w("Sign out", "Se déconnecter")}</button></div></div><div id="admin-tool"></div>`;

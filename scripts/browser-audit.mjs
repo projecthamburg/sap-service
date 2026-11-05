@@ -423,8 +423,54 @@ try {
           Boolean(await page.$('.admin-login input[type="password"]')) &&
             !(await page.$(".inbox-record"))
         );
+        check(
+          `${language}: ordinary sign-in accepts the demo username`,
+          await page.$eval('[name="email"]', (e) => {
+            e.value = "demo";
+            e.dispatchEvent(new Event("input", { bubbles: true }));
+            const lower = e.checkValidity();
+            e.value = "DEMO";
+            e.dispatchEvent(new Event("input", { bubbles: true }));
+            return lower && e.checkValidity();
+          })
+        );
+        check(
+          `${language}: staff email validation remains available`,
+          await page.$eval('[name="email"]', (e) => {
+            e.value = "not-an-email";
+            e.dispatchEvent(new Event("input", { bubbles: true }));
+            const invalid = !e.checkValidity();
+            e.value = "staff@example.com";
+            e.dispatchEvent(new Event("input", { bubbles: true }));
+            return invalid && e.checkValidity();
+          })
+        );
+        check(
+          `${language}: demo sign-in is discoverable from the regular form`,
+          await page.$eval('[data-demo-entry]', (e) =>
+            new URL(e.href).searchParams.get("demo") === "1"
+          )
+        );
       }
     }
+    const demoURL = new URL(base);
+    demoURL.searchParams.set("demo", "1");
+    demoURL.hash = `/${language}/admin`;
+    await goto(demoURL.href);
+    await page.waitForSelector('.admin-login input[type="password"]');
+    check(
+      `${language}: shared demo entry needs a password and no email`,
+      await page.$eval('[name="email"]', (e) =>
+        e.value === "demo" && e.type === "text" && e.readOnly && e.checkValidity()
+      ) && !(await page.$('[data-forgot]'))
+    );
+    check(
+      `${language}: demo form offers the team sign-in without changing language`,
+      await page.$eval('[data-team-entry]', (e, lang) => {
+        const url = new URL(e.href);
+        return !url.searchParams.has("demo") && url.hash.includes(`/${lang}/`);
+      }, language)
+    );
   }
   await goto("#consultation");
   await page.waitForSelector("#booking-frame[src]");

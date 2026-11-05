@@ -152,6 +152,8 @@ export function installLocalizedValidation(root) {
         message = french
           ? "Veuillez entrer une adresse courriel valide."
           : "Please enter a valid email address.";
+      else if (field.validity.patternMismatch && field.title)
+        message = field.title;
       else if (field.validity.rangeUnderflow)
         message = french
           ? `La valeur minimale est ${field.min}.`

@@ -274,7 +274,7 @@ for (const device of matrix) {
     check(
       "Invalid email stays at the sign-in gate",
       await exec(
-        'return document.querySelector(".admin-login [name=email]").validity.typeMismatch && !document.querySelector(".lead-row")'
+        'return !document.querySelector(".admin-login [name=email]").validity.valid && !document.querySelector(".lead-row")'
       )
     );
     await click("[data-forgot]");
