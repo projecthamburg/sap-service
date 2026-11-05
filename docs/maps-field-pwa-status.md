@@ -1,6 +1,6 @@
-# Maps and field app — November 2, 2026
+# Maps and field app — November 5, 2026
 
-The owner authorized resumption after the saved pause. The Admin/Maps release is published at https://projecthamburg.github.io/sap-service/#/en/admin. The standalone entry is https://projecthamburg.github.io/sap-service/?workspace=maps#/en/admin/maps. The current build is `a7fc48499a9c`, adding a separate read-only demo login; use [verification](verification.md) for the exact accepted Actions/device results. The previous paused frontend checkpoint has been integrated and superseded.
+The owner authorized resumption after the saved pause. The Admin/Maps release is published at https://projecthamburg.github.io/sap-service/#/en/admin. The standalone entry is https://projecthamburg.github.io/sap-service/?workspace=maps#/en/admin/maps. The current build is `d144a24a4e4a`, applying the owner’s audited location register while retaining the separate read-only demo login; use [verification](verification.md) for the exact accepted Actions/device results. The previous paused frontend checkpoint has been integrated and superseded.
 
 ## Delivered
 
@@ -14,7 +14,7 @@ The owner authorized resumption after the saved pause. The Admin/Maps release is
 - Visible location-denied guidance and explicit session/data connection retries that retain valid credentials.
 - Adaptive sign-in centering that follows actual header/window changes, safe short-window scrolling and phone control spacing.
 
-The existing 67-record owner-supplied private research register is preserved. Synthetic ZIP data was excluded. Field observations remain commercially unqualified. Tests use an isolated server namespace and remove their synthetic sites. All infrastructure remains in the business AWS account in Canada Central; the existing on-demand table, S3 and Lambda are reused, with no added always-on field-tracking server. The dedicated SAP Google key remains restricted and delivered through authenticated configuration.
+The active private research register now contains exactly the 30 sites in the owner’s November 5 audited inclusion list, with corrected coordinates and structured location provenance. The preceding 67-record snapshot remains in private version history; its other 37 records are excluded from the active map. Synthetic ZIP data was excluded. Field observations remain commercially unqualified. Tests use an isolated server namespace and remove their synthetic sites. All infrastructure remains in the business AWS account in Canada Central; the existing on-demand table, S3 and Lambda are reused, with no added always-on field-tracking server. The dedicated SAP Google key remains restricted and delivered through authenticated configuration.
 
 ## Operational limits
 

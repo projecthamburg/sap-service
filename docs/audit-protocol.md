@@ -42,3 +42,12 @@ For the map app, compare the map canvas bottom with the collapsed site sheet, no
 
 Field-card acceptance checks driving and visit actions in the first screen, folded research by default, retained full records, and sticky directions while expanded details scroll. Permission-denied text must be visible to a sighted user, not merely present in a clipped live region. Connection tests separately interrupt a session read and a dataset read, then use the displayed Retry control to recover real data. Record genuine network failures and rerun acceptance; do not turn an interrupted flow into a passing count. No mutation is automatically retried.
 
+
+## Audited map replacements
+
+Treat the owner's approved location file as an explicit inclusion list. Archive its exact bytes and SHA-256 privately, independently parse and compare every ID/name/address/coordinate/status, and validate the candidate schema and lossless CSV round trip. Do not infer additional points, merge nearby but distinct IDs, or remove finished sites that remain in the approved list. Preserve existing commercial qualifications separately from location confidence. An audit of a location does not verify an available cleaning contract.
+
+Archive the immediate live version before replacement. Use the authenticated version-checked import, retain both private encrypted content-addressed snapshots, and verify the saved version/hash and exact active ID set afterwards. A concurrent version change requires rebasing and another comparison rather than overwriting. Field observations and visit history are separate operational records; their migration/deletion needs its own explicit scope.
+
+For acceptance, compare all actual Google SDK marker positions in light/dark modes with the independent approved source fixture, alongside the authenticated API payload. Check driving destinations, locked audited coordinates, both languages, normal staff/demo access, fallback, standalone app, mobile/tablet portrait and landscape, and desktop engines. Keep actual rendered marker observations, screenshots, source hashes and failed attempts private. A count alone cannot establish correct geography. Revoke the disposable test account after closing all cloud sessions; leave permanent staff/demo accounts unchanged.
+
